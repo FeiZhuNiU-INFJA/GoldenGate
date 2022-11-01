@@ -1,0 +1,5 @@
+*.parquet
+*.pt
+*.pyc
+.idea/
+*.torchscript
