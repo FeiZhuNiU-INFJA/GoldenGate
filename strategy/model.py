@@ -7,7 +7,7 @@ import torch.functional as F
 import torch
 from matplotlib import pyplot as plt
 from tqdm import tqdm
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import confusion_matrix, classification_report, recall_score, precision_score
 
 device = torch.device('cpu')
 
@@ -169,10 +169,15 @@ class MyLSTM(nn.Module, ModelExt):
                     # print(f"validation: {F.softmax(output, dim=1) if not USE_BCELOSS else output, y_batch}")
                     running_validation_loss += validation_loss.item()
 
-                # TODO 不同confidence下的PR
+
                 cm = confusion_matrix(y_trues, y_predicts)
                 print(f"confusion_matrix: {cm}")
                 print(classification_report(y_trues, y_predicts))
+
+                # TODO 不同confidence下的PR
+
+
+
                 cur_val_loss = running_validation_loss / len(validation_dl)
                 validation_losses.append(cur_val_loss)
                 print(f"valid loss: {cur_val_loss}")
