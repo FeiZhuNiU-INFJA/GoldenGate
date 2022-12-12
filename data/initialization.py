@@ -7,8 +7,10 @@ from data.base import *
 from functools import partial
 from p_tqdm import p_umap
 start_date = "20000101"
-
-def download_hist_data(ts_code, config: AssetConfig):
+retry = 3
+def download_hist_data(ts_code, config: AssetConfig, retry=3):
+    if retry==0:
+        return
     try:
         df = get_symbol_hist(ts_code=ts_code, start_date=start_date)
         df.set_index("trade_date", inplace=True)
@@ -17,6 +19,7 @@ def download_hist_data(ts_code, config: AssetConfig):
     except:
         print(ts_code)
         print(df.head())
+        download_hist_data(ts_code, config, retry=retry-1)
 
 def init_stock_SSE():
     LOGGER.info("Get SSE symbols")
@@ -26,7 +29,7 @@ def init_stock_SSE():
     df_trade_cal = get_trade_cal(exchange=Exchange.SSE)
     df_trade_cal.to_csv(SSEConfig.F_TRADE_CALENDAR)
 
-    p_umap(partial(download_hist_data, config=SSEConfig), df_symbol.ts_code, num_cpus=6, desc="get history data")
+    p_umap(partial(download_hist_data, config=SSEConfig), df_symbol.ts_code, num_cpus=4, desc="get history data")
 
 
 
@@ -38,7 +41,7 @@ def init_stock_SZSE():
     df_trade_cal = get_trade_cal(exchange=Exchange.SZSE)
     df_trade_cal.to_csv(SZSEConfig.F_TRADE_CALENDAR)
 
-    p_umap(partial(download_hist_data, config=SZSEConfig), df_symbol.ts_code, num_cpus=6, desc="get history data")
+    p_umap(partial(download_hist_data, config=SZSEConfig), df_symbol.ts_code, num_cpus=4, desc="get history data")
 
 
 
