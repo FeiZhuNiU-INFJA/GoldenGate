@@ -41,10 +41,9 @@ def get_trade_cal(exchange: Exchange):
     return df
 
 
-def get_symbol_hist(symbol, start_date=None, end_date=None, interval=Interval.DAILY):
+def get_symbol_hist(ts_code, start_date=None, end_date=None, interval=Interval.DAILY):
     # TODO 每次最多20年的数据
-    df = PRO.query({Interval.DAILY: "daily"}.get(interval, "daily"), ts_code=symbol, start_date=start_date,
-                   end_date=end_date)
+    df = PRO.query(interval, ts_code=ts_code, start_date=start_date, end_date=end_date)
     return df
 
 
