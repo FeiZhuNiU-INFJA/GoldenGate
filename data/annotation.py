@@ -77,7 +77,7 @@ class BuySellPointAnnotation(Annotation):
         min_gap = max(1, min_gap)
         soft_percent = min(soft_percent, min_gap)
 
-        closes = list(np.squeeze((data["Close"]).values))
+        closes = list(np.squeeze((data["close"]).values))
         print(len(closes))
         labels = [0] * len(closes)
         LABEL_SELL = -1
@@ -192,7 +192,7 @@ class ReturnAnnotation(Annotation):
 
     @classmethod
     def _labeling(cls, data: pd.DataFrame, **kwargs) -> pd.Series:
-        return data["Close"].shift(-1) / data["Close"] - 1
+        return data["close"].shift(-1) / data["close"] - 1
 
     @classmethod
     def visualize(cls, data_with_label: pd.DataFrame, **kwargs):
@@ -200,4 +200,6 @@ class ReturnAnnotation(Annotation):
 
 
 if __name__ == '__main__':
-    pass
+    df = pd.read_csv("/Users/yulin/workspace/extreme_quant/600000.SH.csv")
+    df = BuySellPointAnnotation.generate_labeled_data(df)
+    df.to_csv("xxx.csv")

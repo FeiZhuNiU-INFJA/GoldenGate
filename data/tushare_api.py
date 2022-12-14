@@ -1,7 +1,6 @@
 from typing import Optional
 
 import tushare as ts
-import pandas as pd
 from data.base import Interval, Exchange
 
 ts.set_token("b9d8623c7dbde160e75147e2b47588810dd8dc3033ec8cadc9f64f53")

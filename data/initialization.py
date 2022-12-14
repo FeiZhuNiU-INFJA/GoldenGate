@@ -6,10 +6,13 @@ from common.config import *
 from data.base import *
 from functools import partial
 from p_tqdm import p_umap
+
+# TODO 每次只能取6000条数据  未来可能有问题
 start_date = "20000101"
-retry = 3
+
+
 def download_hist_data(ts_code, config: AssetConfig, retry=3):
-    if retry==0:
+    if retry == 0:
         return
     try:
         df = get_symbol_hist(ts_code=ts_code, start_date=start_date)
@@ -21,6 +24,7 @@ def download_hist_data(ts_code, config: AssetConfig, retry=3):
         print(df.head())
         download_hist_data(ts_code, config, retry=retry-1)
 
+
 def init_stock_SSE():
     LOGGER.info("Get SSE symbols")
     df_symbol = get_symbols(exchange=Exchange.SSE)
@@ -28,9 +32,8 @@ def init_stock_SSE():
     LOGGER.info("Get SSE trading calendar")
     df_trade_cal = get_trade_cal(exchange=Exchange.SSE)
     df_trade_cal.to_csv(SSEConfig.F_TRADE_CALENDAR)
-
+    # 获取2000年以后得日线数据
     p_umap(partial(download_hist_data, config=SSEConfig), df_symbol.ts_code, num_cpus=4, desc="get history data")
-
 
 
 def init_stock_SZSE():
@@ -42,7 +45,6 @@ def init_stock_SZSE():
     df_trade_cal.to_csv(SZSEConfig.F_TRADE_CALENDAR)
 
     p_umap(partial(download_hist_data, config=SZSEConfig), df_symbol.ts_code, num_cpus=4, desc="get history data")
-
 
 
 if __name__ == '__main__':
