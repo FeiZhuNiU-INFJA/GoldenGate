@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from enum import Enum
+from typing import Optional
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -13,45 +14,40 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to
 from common.logger import LOGGER
 
-HEAD_LABEL = "Target"
+# HEAD_LABEL = "Target"
 
 
 class Annotation(metaclass=ABCMeta):
     """
-    用于生成label的基类
+    用于打标签的基类
     """
-
-    # def __init__(self, data: pd.DataFrame) -> None:
-    #     self.data = data
-    #     self.data_with_label = None
-
-    @classmethod
+    @property
     @abstractmethod
-    def _labeling(cls, data: pd.DataFrame, **kwargs) -> pd.Series:
+    def head_label(self):
+        """
+        表头
+        """
+        return "should be reset in subclass"
+
+    @abstractmethod
+    def _labeling(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         pass
 
-    @classmethod
-    def generate_labeled_data(cls, data: pd.DataFrame, **kwargs) -> pd.DataFrame:
-        """
-        调用子类的_labeling方法
-        :param data:
-        :param kwargs:
-        :return:
-        """
-        ret = data.copy()
-        LOGGER.info(f"Labeling using {cls.__name__} ")
-        label = cls._labeling(ret, **kwargs)
+    # TODO 参数放到构造函数里面去
+    def generate_data_with_label(self, data: pd.DataFrame, **kwargs)-> Optional[pd.DataFrame]:
+        data = data.copy()
+        LOGGER.info(f"Labeling using {self.__class__.__name__} ")
+        label = self._labeling(data, **kwargs)
         if label is None or len(label) != len(data):
-            LOGGER.error(f"{cls.__name__} Labeling not working correctly")
+            LOGGER.error(f"{self.__class__.__name__} Labeling not working correctly")
+            return None
         else:
-            label.name = HEAD_LABEL
-            ret[HEAD_LABEL] = label.values
-        LOGGER.info(f"Labeling complete")
-        return ret
+            label.name = self.head_label
+            data[self.head_label] = label.values
+        return data
 
-    @classmethod
     @abstractmethod
-    def visualize(cls, data_with_label: pd.DataFrame, **kwargs):
+    def visualize(self, data_with_label: pd.DataFrame, **kwargs):
         """
         把self.data_with_label可视化出来
         """
@@ -59,9 +55,11 @@ class Annotation(metaclass=ABCMeta):
 
 
 class BuySellPointAnnotation(Annotation):
+    @property
+    def head_label(self):
+        return "BuySellPoint"
 
-    @classmethod
-    def _labeling(cls, data: pd.DataFrame,
+    def _labeling(self, data: pd.DataFrame,
                   quote_change=0.2,
                   soft_percent=0.,
                   soft_eta=1.,
@@ -173,33 +171,35 @@ class BuySellPointAnnotation(Annotation):
                         idx_high = cur_idx
         return pd.Series(labels)
 
-    @classmethod
-    def visualize(cls, data_with_label: pd.DataFrame, **kwargs):
+
+    def visualize(self, data_with_label: pd.DataFrame, **kwargs):
         hist = data_with_label
         # 把走势画出来
         fig = go.Figure(
-            data=go.Scatter(x=hist.index, y=hist['Close'], mode='lines', name=f'Price_{kwargs.get("symbol", "")}'))
+            data=go.Scatter(x=hist.index, y=hist['close'], mode='lines', name=f'Price_{kwargs.get("symbol", "")}'))
         # 把target不为零的点画出来
-        hist2 = hist[hist["Target"] != 0]
-        fig.add_scatter(x=hist2.index, y=hist2['Close'], mode='markers', marker_color=hist2['Target'], name="Label")
+        hist2 = hist[hist[self.head_label] != 0]
+        fig.add_scatter(x=hist2.index, y=hist2['close'], mode='markers', marker_color=hist2[self.head_label], name="Label")
         fig.show()
 
 
-class ReturnAnnotation(Annotation):
-    """
-    第二天的return
-    """
+# class ReturnAnnotation(Annotation):
+#     """
+#     第二天的return
+#     """
 
-    @classmethod
-    def _labeling(cls, data: pd.DataFrame, **kwargs) -> pd.Series:
-        return data["close"].shift(-1) / data["close"] - 1
+#     @classmethod
+#     def _labeling(cls, data: pd.DataFrame, **kwargs) -> pd.Series:
+#         return data["close"].shift(-1) / data["close"] - 1
 
-    @classmethod
-    def visualize(cls, data_with_label: pd.DataFrame, **kwargs):
-        pass
+#     @classmethod
+#     def visualize(cls, data_with_label: pd.DataFrame, **kwargs):
+#         pass
 
 
 if __name__ == '__main__':
-    df = pd.read_csv("/Users/yulin/workspace/extreme_quant/600000.SH.csv")
-    df = BuySellPointAnnotation.generate_labeled_data(df)
-    df.to_csv("xxx.csv")
+    df = pd.read_csv("600000.SH.csv")
+    anno = BuySellPointAnnotation()
+    df2 = anno.generate_data_with_label(df)
+    anno.visualize(df2)
+    # anno.generate_labeled_data(df, f_target="600000.SH.csv")
