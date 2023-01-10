@@ -17,6 +17,26 @@ if str(ROOT) not in sys.path:
 from common.logger import LOGGER
 
 
+class Classiable(metaclass=ABCMeta):
+    @classmethod
+    @abstractmethod
+    def label_to_class(cls, label):
+        """
+        如果是分类任务，映射到哪一类
+        :param label:
+        :return:
+        """
+        pass
+
+    @classmethod
+    @abstractmethod
+    def n_class(cls):
+        """
+        如果是分类任务，可以分成几类
+        :return:
+        """
+        pass
+
 
 class Annotation(metaclass=ABCMeta):
     """
@@ -55,7 +75,7 @@ class Annotation(metaclass=ABCMeta):
         pass
 
 
-class BuySellPointAnnotation(Annotation):
+class BuySellPointAnnotation(Annotation, Classiable):
 
     def __init__(self,
                  quote_change=0.2,
@@ -190,6 +210,23 @@ class BuySellPointAnnotation(Annotation):
         hist2 = hist[hist[self.head_label] != 0]
         fig.add_scatter(x=hist2.index, y=hist2['close'], mode='markers', marker_color=hist2[self.head_label], name="Label")
         fig.show()
+
+    @classmethod
+    def label_to_class(cls, label):
+        if label == 0:
+            return 0
+        if label > 0:
+            return 1
+        else:
+            return 2
+
+    @classmethod
+    def n_class(cls):
+        """
+        0, 1 买, 2 卖
+        :return:
+        """
+        return 3
 
 
 # class ReturnAnnotation(Annotation):

@@ -9,8 +9,6 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import confusion_matrix, classification_report, recall_score, precision_score
 
-device = torch.device('cpu')
-
 
 class ModelExt(metaclass=ABCMeta):
 
@@ -34,13 +32,16 @@ class ModelExt(metaclass=ABCMeta):
 class MyLSTM(nn.Module, ModelExt):
 
     def __init__(self,
-                 input_size, hidden_size, num_layers, dropout_prob,
+                 input_size,
+                 hidden_size,
+                 num_layers,
+                 dropout_prob,
                  directions=1,
                  is_classification=False,
                  n_classes=3,
                  use_bceloss=False,
-                 resume=False,
-                 model_name=None):
+                 device=torch.device('cpu'),
+                 model_name="LSTM"):
         super(MyLSTM, self).__init__()
 
         self.num_layers = num_layers
@@ -48,21 +49,21 @@ class MyLSTM(nn.Module, ModelExt):
         self.directions = directions
         self.is_classification = is_classification
         self.use_bceloss = use_bceloss
-        self.resume = resume
         self.model_name = model_name
+        self.device = device
 
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout_prob,
+        self.lstm = nn.LSTM(input_size,
+                            hidden_size,
+                            num_layers,
+                            batch_first=True,
+                            dropout=dropout_prob,
                             bidirectional=(directions == 2))
         self.linear = nn.Linear(hidden_size * self.directions, 1 if not is_classification else n_classes)
         self.sigmoid = nn.Sigmoid()
 
-        # state_dim = (self.num_layers * self.directions, 1, self.hidden_size)
-        # self.init_h = nn.Parameter(torch.zeros(state_dim))
-        # self.init_c = nn.Parameter(torch.zeros(state_dim))
-
     def init_hidden_states(self, batch_size):
-        state_dim = (self.num_layers * self.directions, batch_size, self.hidden_size)
-        return torch.zeros(state_dim).to(device), torch.zeros(state_dim).to(device)
+        _state_dim = (self.num_layers * self.directions, batch_size, self.hidden_size)
+        return torch.zeros(_state_dim).to(self.device), torch.zeros(_state_dim).to(self.device)
 
     def forward(self, x, states=None):
         x, (h, c) = self.lstm(x, states)
@@ -76,7 +77,7 @@ class MyLSTM(nn.Module, ModelExt):
         else:
             return out
 
-    def save_model(self, epoch, min_val_loss, opt, path="./model_state.pt"):
+    def save_model(self, epoch, min_val_loss, opt, path="./model_lstm.pt"):
         print(f"New minimum reached at epoch #{epoch + 1}, saving model state...")
         checkpoint = {
             'epoch': epoch + 1,
@@ -95,12 +96,20 @@ class MyLSTM(nn.Module, ModelExt):
             opt.load_state_dict(checkpoint["opt_state"])
         return opt, checkpoint["epoch"], min_val_loss
 
-    def train_model(self, training_dl, validation_dl, optimizer, criterion,
-                    epochs, batch_size, validate_batch_size,
-                    is_classification, use_bceloss,
-                    validate_every):
-        if self.resume and self.model_name:
-            self.load_model(self.model_name)
+    def train_model(
+            self,
+            training_dl,
+            validation_dl,
+            optimizer,
+            criterion,
+            epochs,
+            batch_size,
+            validate_batch_size,
+            validate_every_n_epoch,
+            f_weights=None,    # 用于resume的模型文件
+    ):
+        if f_weights:
+            self.load_model(f_weights)
         training_losses = []
         validation_losses = []
         y_trues = []
@@ -111,18 +120,18 @@ class MyLSTM(nn.Module, ModelExt):
         # Set to train mode
         self.train()
 
-        for epoch in tqdm(range(epochs)):
+        for epoch in tqdm(range(epochs), desc="epoch"):
 
             running_training_loss = 0.0
             states = self.init_hidden_states(batch_size)
             # Begin training
-            for idx, (x_batch, y_batch) in enumerate(tqdm(training_dl)):
+            for idx, (x_batch, y_batch) in enumerate(tqdm(training_dl, desc="training")):
                 # Convert to Tensors
-                x_batch = x_batch.float().to(device)
-                if is_classification and not use_bceloss:
-                    y_batch = y_batch.long().to(device)
+                x_batch = x_batch.float().to(self.device)
+                if self.is_classification and not self.use_bceloss:
+                    y_batch = y_batch.long().to(self.device)
                 else:
-                    y_batch = y_batch.float().to(device)
+                    y_batch = y_batch.float().to(self.device)
 
                 states = [state.detach() for state in states]
                 optimizer.zero_grad()
@@ -141,43 +150,38 @@ class MyLSTM(nn.Module, ModelExt):
             # Average loss across timesteps
             training_losses.append(running_training_loss / len(training_dl))
 
-            if epoch % validate_every == 0:
-
-                # Set to eval mode
+            if epoch % validate_every_n_epoch == 0:
                 self.eval()
-                validation_states = self.init_hidden_states(validate_batch_size)
-                running_validation_loss = 0.0
+                with torch.no_grad():
+                    validation_states = self.init_hidden_states(validate_batch_size)
+                    running_validation_loss = 0.0
 
-                for idx, (x_batch, y_batch) in enumerate(tqdm(validation_dl)):
-                    # Convert to Tensors
-                    x_batch = x_batch.float().to(device)
-                    if is_classification and not use_bceloss:
-                        y_batch = y_batch.long().to(device)
-                    else:
-                        y_batch = y_batch.float().to(device)
-                    validation_states = [state.detach() for state in validation_states]
-                    output = self(x_batch, validation_states)
-                    validation_loss = criterion(output, y_batch)
+                    for idx, (x_batch, y_batch) in enumerate(tqdm(validation_dl, desc="validation")):
+                        # Convert to Tensors
+                        x_batch = x_batch.float().to(self.device)
+                        if self.is_classification and not self.use_bceloss:
+                            y_batch = y_batch.long().to(self.device)
+                        else:
+                            y_batch = y_batch.float().to(self.device)
+                        validation_states = [state.detach() for state in validation_states]
+                        output = self(x_batch, validation_states)
+                        validation_loss = criterion(output, y_batch)
 
-                    output_softmax = torch.nn.Softmax(dim=1)(output)
+                        output_softmax = torch.nn.Softmax(dim=1)(output)
 
-                    max_idx = torch.argmax(output).item()
-                    # TODO batch_size!=1
-                    y_predicts.append(max_idx)
-                    y_confidences.append(output_softmax[0][max_idx].item())
-                    y_trues.append(y_batch.item())
-                    # print(f"validation: {F.softmax(output, dim=1) if not USE_BCELOSS else output, y_batch}")
-                    running_validation_loss += validation_loss.item()
-
+                        max_idx = torch.argmax(output).item()
+                        # TODO batch_size!=1
+                        y_predicts.append(max_idx)
+                        y_confidences.append(output_softmax[0][max_idx].item())
+                        y_trues.append(y_batch.item())
+                        # print(f"validation: {F.softmax(output, dim=1) if not USE_BCELOSS else output, y_batch}")
+                        running_validation_loss += validation_loss.item()
 
                 cm = confusion_matrix(y_trues, y_predicts)
                 print(f"confusion_matrix: {cm}")
                 print(classification_report(y_trues, y_predicts))
 
                 # TODO 不同confidence下的PR
-
-
-
                 cur_val_loss = running_validation_loss / len(validation_dl)
                 validation_losses.append(cur_val_loss)
                 print(f"valid loss: {cur_val_loss}")
@@ -221,7 +225,7 @@ class MyLSTM(nn.Module, ModelExt):
             x = _data[idx:idx + seq_length].values
             y = _data.iloc[idx + seq_length - 1][TARGET]
 
-            x = torch.tensor(x).unsqueeze(dim=0).float().to(device)
+            x = torch.tensor(x).unsqueeze(dim=0).float().to(self.device)
             states = self.init_hidden_states(batch_size=1)
             output = self(x, states)
             if is_classification:
@@ -250,14 +254,14 @@ class MyLSTM(nn.Module, ModelExt):
     def export_model_jit(self, pt_path, jit_path="model.torchscript"):
         self.load_model(pt_path)
         self.eval()
-        input_ = torch.randn((1, 32, 7)).float().to(device)
-        states = self.init_hidden_states(1)
+        # TODO
+        input_ = torch.randn((1, 32, 7)).float().to(self.device)
+        states = self.init_hidden_states(batch_size=1)
         ts = torch.jit.trace(self, (input_, states))
         ts.save(jit_path)
 
 
 if __name__ == '__main__':
-
     # model = MyLSTM(
     #     input_size=7,
     #     hidden_size=16,
@@ -269,14 +273,13 @@ if __name__ == '__main__':
     # ).to(device)
     #
     # model.export_model_jit("None_last.pt")
-
-
+    device = torch.device('cpu')
     model = torch.jit.load("model.torchscript")
     model.eval()
     input_ = torch.randn((1, 32, 7)).float().to(device)
     state_dim = (2 * 1, 1, 16)
-    h,c = torch.zeros(state_dim).to(device), torch.zeros(state_dim).to(device)
-    output = model(input_, (h,c))
+    h, c = torch.zeros(state_dim).to(device), torch.zeros(state_dim).to(device)
+    output = model(input_, (h, c))
     print(output)
     output1 = torch.nn.Softmax(dim=1)(output)
     print(output1)

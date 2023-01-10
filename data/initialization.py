@@ -33,7 +33,7 @@ def download_hist_data(ts_code, config: Type[AssetConfig], retry=3):
         download_hist_data(ts_code, config, retry=retry-1)
 
 
-def extra_works(df_symbol: DataFrame, config:Type[AssetConfig]):
+def extra_works(df_symbol: DataFrame, config: Type[AssetConfig]):
     LOGGER.info("save industry info")
     industries = df_symbol.industry.value_counts().index.to_list()
     f_industry = config.HOME / "industry.csv"

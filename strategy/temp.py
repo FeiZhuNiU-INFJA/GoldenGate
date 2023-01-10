@@ -145,4 +145,4 @@ if __name__ == '__main__':
 
     model.train_model(training_dl=training_dl, validation_dl=validation_dl, optimizer=optimizer, criterion=criterion,
                       epochs=EPOCHS, batch_size=params_dl["batch_size"], validate_batch_size=params_dl_val["batch_size"],
-                      is_classification=IS_CLASSIFICATION, use_bceloss=False, validate_every=1)
+                      is_classification=IS_CLASSIFICATION, use_bceloss=False, validate_every_n_epoch=1)
