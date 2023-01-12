@@ -79,13 +79,13 @@ def init_stock_SZSE():
 
 
 if __name__ == '__main__':
-    # # 下载沪深、北交股票代码信息、交易日信息
-    # init_stock_SSE()
-    # init_stock_SZSE()
+    # 下载沪深、北交股票代码信息、交易日信息
+    init_stock_SSE()
+    init_stock_SZSE()
 
-    # 补充
-    download_hist_data("688172.SH", config=SSEConfig)
-    download_hist_data("301265.SZ", config=SZSEConfig)
+    # # 补充
+    # download_hist_data("688172.SH", config=SSEConfig)
+    # download_hist_data("301265.SZ", config=SZSEConfig)
 
     # download_hist_data("600363.SH", config=SSEConfig)
     # download_hist_data("600785.SH", config=SSEConfig)

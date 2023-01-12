@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-
 import numpy as np
 import pandas as pd
 import torch.nn as nn
@@ -102,6 +101,7 @@ class MyLSTM(nn.Module, ModelExt):
             validation_dl,
             optimizer,
             criterion,
+            scheduler,
             epochs,
             batch_size,
             validate_batch_size,
@@ -135,7 +135,6 @@ class MyLSTM(nn.Module, ModelExt):
 
                 states = [state.detach() for state in states]
                 optimizer.zero_grad()
-
                 # Make prediction
                 output = self(x_batch, states)
                 # Calculate loss
@@ -146,6 +145,7 @@ class MyLSTM(nn.Module, ModelExt):
 
                 torch.nn.utils.clip_grad_norm_(self.parameters(), 20)
                 optimizer.step()
+                scheduler.step()
 
             # Average loss across timesteps
             training_losses.append(running_training_loss / len(training_dl))
