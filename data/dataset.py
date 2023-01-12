@@ -7,8 +7,6 @@ import tqdm
 import glob
 import torch.nn.functional as F
 
-from data.annotation import Classiable
-
 
 class SingleSymbolDataset(Dataset):
 

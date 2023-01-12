@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import pandas as pd
 import torch.nn as nn
-import torch.functional as F
+import torch.nn.functional as F
 import torch
 from matplotlib import pyplot as plt
 from tqdm import tqdm
@@ -106,7 +106,7 @@ class MyLSTM(nn.Module, ModelExt):
             batch_size,
             validate_batch_size,
             validate_every_n_epoch,
-            f_weights=None,    # 用于resume的模型文件
+            f_weights=None,  # 用于resume的模型文件
     ):
         if f_weights:
             self.load_model(f_weights)
@@ -212,43 +212,46 @@ class MyLSTM(nn.Module, ModelExt):
         plt.ylabel('Loss')
         plt.show()
 
-    def test_model(self, path, data: pd.DataFrame, seq_length, threshold=0.9,
-                   is_classification=True, use_bceloss=False):
-        TARGET = "Y"
-
-        self.load_model(path)
+    def test_model(
+            self,
+            f_model,
+            data: pd.DataFrame,
+            seq_length,
+            threshold,
+            head_label,
+            head_features,
+    ):
+        self.load_model(f_model)
         self.eval()
         _data = data.copy()
-        _data.iloc[0:seq_length][TARGET] = 0
         _data2 = _data.reset_index()
-        for idx in range(len(_data) - seq_length):
-            x = _data[idx:idx + seq_length].values
-            y = _data.iloc[idx + seq_length - 1][TARGET]
+        _data.iloc[0:seq_length][head_label] = 0
+        for idx in tqdm(range(len(_data) - seq_length)):
+
+            x = _data[idx:idx + seq_length][head_features].values
+            # y = _data.iloc[idx + seq_length - 1][head_label]
 
             x = torch.tensor(x).unsqueeze(dim=0).float().to(self.device)
             states = self.init_hidden_states(batch_size=1)
             output = self(x, states)
-            if is_classification:
-
-                if not use_bceloss:
+            if self.is_classification:
+                if not self.use_bceloss:
                     output = F.softmax(output, dim=1)
                     # output = torch.exp(output)
-
                 max_idx = torch.argmax(output).item()  # 0, 1, 2
                 conf = output[0][max_idx].item()
                 if max_idx == 1 and conf >= threshold:
-                    output = -1
-                elif max_idx == 2 and conf >= threshold:
                     output = 1
+                elif max_idx == 2 and conf >= threshold:
+                    output = -1
                 else:
                     output = 0
             else:
                 output = output.item()
             # print(output)
-            print(y, output)
-            _data.loc[_data2.iloc[idx + seq_length - 1]["Date"], TARGET] = output
-            # _data.iat[idx + SEQ_LENGTH - 1, TARGET] = 111
-        print(_data[TARGET].value_counts())
+            # print(y, output)
+            _data.loc[_data2.iloc[idx + seq_length - 1]["trade_date"], head_label] = output
+
         return _data
 
     def export_model_jit(self, pt_path, jit_path="model.torchscript"):

@@ -3,26 +3,18 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils.data import ConcatDataset, DataLoader
-from pathlib import Path
 import tqdm
 import glob
-import sys
 
-# FILE = Path(__file__).resolve()
-# ROOT = FILE.parents[1]  # ninja_pro
-# print(FILE.parents[1])
-#
-# if str(ROOT) not in sys.path:
-#     sys.path.append(str(ROOT))  # add ROOT to
 from strategy.model import MyLSTM
 from data.annotation import BuySellPointAnnotation
 from data.dataset import SingleSymbolDataset
-
+from config import anno1
 
 if __name__ == '__main__':
     device = torch.device("cpu")
     # HEADER_TARGET = "Y"
-    SEQ_LENGTH = 64
+    SEQ_LENGTH = 256
     ANNOTATION_CLASS = BuySellPointAnnotation
     IS_CLASSIFICATION = True
     BATCH_SIZE = 128
@@ -42,7 +34,8 @@ if __name__ == '__main__':
     VAL_END_DATE = "20220630"
 
     FEATURES_HEAD = ["open", "high", "low", "close"]
-    LABEL_HEAD = "BuySellPoint_qc_0.2_sp_0.02"
+    # LABEL_HEAD = "BuySellPoint_qc_0.2_sp_0.02"
+    LABEL_HEAD = anno1.head_label
 
     train_dl_params = {'batch_size': BATCH_SIZE,
                        'shuffle': True,  # TODO
