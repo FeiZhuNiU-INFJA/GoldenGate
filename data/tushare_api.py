@@ -1,6 +1,10 @@
 from typing import Optional
 
 import tushare as ts
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).parents[1]))
 from data.base import Interval, Exchange
 
 ts.set_token("b9d8623c7dbde160e75147e2b47588810dd8dc3033ec8cadc9f64f53")
@@ -46,8 +50,28 @@ def get_symbol_hist(ts_code, start_date=None, end_date=None, interval=Interval.D
     return df
 
 
+def get_index_base(market="SSE"):
+    """
+    https://tushare.pro/document/2?doc_id=94
+    :param market:  SSE   SZSE  etc.
+    :return:
+    """
+    df = PRO.index_basic(market=market)
+    return df
+
+
+def get_index(ts_code):
+    """
+    000001.SH 上证指数
+    :param ts_code:
+    :return:
+    """
+    df = PRO.index_daily(ts_code=ts_code)
+    return df
+
+
 if __name__ == '__main__':
-    get_symbols()
+    get_index_base()
     # df = get_symbol_hist("000002.SZ", start_date="19800101", end_date="19971230")
     # print(df.head())
     # print(len(df))

@@ -14,27 +14,23 @@ from config import anno1
 if __name__ == '__main__':
     device = torch.device("cuda:0")
     # HEADER_TARGET = "Y"
-    SEQ_LENGTH = 256
-    ANNOTATION_CLASS = BuySellPointAnnotation
+    SEQ_LENGTH = 64
     IS_CLASSIFICATION = True
     BATCH_SIZE = 64
-    # NUM_FEATURES = 7  # TODO
     HIDDEN_SIZE = 16
     NUM_LAYERS = 2
     DROPOUT = 0.1
     DIRECTIONS = 2
-    # N_CLASSES = 3
     LEARNING_RATE = 0.0001
     RESUME = False
     EPOCHS = 10
 
     TRAIN_START_DATE = "20000101"
-    TRAIN_END_DATE = "20210601"
-    VAL_START_DATE = "20210601"
+    TRAIN_END_DATE = "20220101"
+    VAL_START_DATE = "20220101"
     VAL_END_DATE = "20221231"
 
     FEATURES_HEAD = ["open", "high", "low", "close"]
-    # LABEL_HEAD = "BuySellPoint_qc_0.2_sp_0.02"
     LABEL_HEAD = anno1.head_label
 
     train_dl_params = {'batch_size': BATCH_SIZE,
@@ -123,13 +119,13 @@ if __name__ == '__main__':
         dropout_prob=DROPOUT,
         directions=DIRECTIONS,
         is_classification=IS_CLASSIFICATION,
-        n_classes=ANNOTATION_CLASS.n_class(),
+        n_classes=anno1.n_class(),
         use_bceloss=False,
         device=device,
-        model_name="LSTM202301",
+        seq_length=SEQ_LENGTH,
     ).to(device)
 
-    optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=0.001)
+    optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=0.0001)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
     if IS_CLASSIFICATION:
         criterion = nn.CrossEntropyLoss(weight=torch.tensor([1, 25., 25.]).float()).to(device)

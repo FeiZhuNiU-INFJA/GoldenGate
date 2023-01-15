@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Type
 
 sys.path.append(str(Path(__file__).parents[1]))
-from data.tushare_api import get_symbols, get_trade_cal, get_symbol_hist
+from data.tushare_api import *
 from common.config import *
 from data.base import *
 from functools import partial
@@ -13,7 +13,7 @@ from p_tqdm import p_umap
 start_date = "20000101"
 
 
-def download_hist_data(ts_code, config: Type[AssetConfig], retry=3):
+def _download_hist_data(ts_code, config: Type[AssetConfig], retry=3):
     """
     :param ts_code:
     :param config:  决定了要保存到什么地方
@@ -30,7 +30,7 @@ def download_hist_data(ts_code, config: Type[AssetConfig], retry=3):
     except:
         print(ts_code)
         print(df.head())
-        download_hist_data(ts_code, config, retry=retry-1)
+        _download_hist_data(ts_code, config, retry=retry - 1)
 
 
 def extra_works(df_symbol: DataFrame, config: Type[AssetConfig]):
@@ -46,7 +46,11 @@ def extra_works(df_symbol: DataFrame, config: Type[AssetConfig]):
         for industry in industries:
             if industry not in industries_exist:
                 f.write(f"{industry}\n")
-    
+
+    LOGGER.info("save index info")
+    df_indexes = get_index_base(market=config.MARKET)
+    df_indexes.to_csv(config.F_INDEX, index=False)
+
 
 def init_stock_SSE():
     LOGGER.info("Get SSE symbols")
@@ -59,8 +63,13 @@ def init_stock_SSE():
 
     LOGGER.info("do extra work")
     extra_works(df_symbol, SSEConfig)
+
+    LOGGER.info("Get 上证指数")
+    df = get_index("000001.SH")
+    df.to_csv(SSEConfig.HOME / "上证指数.csv", index=False)
     # # 获取2000年以后得日线数据
-    p_umap(partial(download_hist_data, config=SSEConfig), df_symbol.ts_code, num_cpus=4, desc="get history data")
+    # p_umap(partial(_download_hist_data, config=SSEConfig), df_symbol.ts_code, num_cpus=4, desc="get history data")
+
 
 
 def init_stock_SZSE():
@@ -75,7 +84,7 @@ def init_stock_SZSE():
     LOGGER.info("do extra work")
     extra_works(df_symbol, SZSEConfig)
 
-    p_umap(partial(download_hist_data, config=SZSEConfig), df_symbol.ts_code, num_cpus=4, desc="get history data")
+    # p_umap(partial(_download_hist_data, config=SZSEConfig), df_symbol.ts_code, num_cpus=4, desc="get history data")
 
 
 if __name__ == '__main__':

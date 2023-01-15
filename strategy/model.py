@@ -27,6 +27,10 @@ class ModelExt(metaclass=ABCMeta):
     def test_model(self, **kwargs):
         pass
 
+    @abstractmethod
+    def inference(self, **kwargs):
+        pass
+
 
 class MyLSTM(nn.Module, ModelExt):
 
@@ -35,12 +39,13 @@ class MyLSTM(nn.Module, ModelExt):
                  hidden_size,
                  num_layers,
                  dropout_prob,
+                 seq_length,
                  directions=1,
                  is_classification=False,
                  n_classes=3,
                  use_bceloss=False,
                  device=torch.device('cpu'),
-                 model_name="LSTM"):
+                 weight=None):
         super(MyLSTM, self).__init__()
 
         self.num_layers = num_layers
@@ -48,7 +53,7 @@ class MyLSTM(nn.Module, ModelExt):
         self.directions = directions
         self.is_classification = is_classification
         self.use_bceloss = use_bceloss
-        self.model_name = model_name
+        self.seq_length = seq_length
         self.device = device
 
         self.lstm = nn.LSTM(input_size,
@@ -59,6 +64,9 @@ class MyLSTM(nn.Module, ModelExt):
                             bidirectional=(directions == 2))
         self.linear = nn.Linear(hidden_size * self.directions, 1 if not is_classification else n_classes)
         self.sigmoid = nn.Sigmoid()
+
+        if weight:
+            self.load_model(path=weight)
 
     def init_hidden_states(self, batch_size):
         _state_dim = (self.num_layers * self.directions, batch_size, self.hidden_size)
@@ -105,11 +113,8 @@ class MyLSTM(nn.Module, ModelExt):
             epochs,
             batch_size,
             validate_batch_size,
-            validate_every_n_epoch,
-            f_weights=None,  # 用于resume的模型文件
+            validate_every_n_epoch
     ):
-        if f_weights:
-            self.load_model(f_weights)
         training_losses = []
         validation_losses = []
         y_trues = []
@@ -170,7 +175,7 @@ class MyLSTM(nn.Module, ModelExt):
                         output_softmax = torch.nn.Softmax(dim=1)(output)
 
                         max_idx = torch.argmax(output).item()
-                        # TODO batch_size!=1
+                        # TODO batch_size != 1
                         y_predicts.append(max_idx)
                         y_confidences.append(output_softmax[0][max_idx].item())
                         y_trues.append(y_batch.item())
@@ -214,43 +219,24 @@ class MyLSTM(nn.Module, ModelExt):
 
     def test_model(
             self,
-            f_model,
             data: pd.DataFrame,
-            seq_length,
             threshold,
             head_label,
             head_features,
     ):
-        self.load_model(f_model)
         self.eval()
         _data = data.copy()
         _data2 = _data.reset_index()
-        _data.iloc[0:seq_length][head_label] = 0
-        for idx in tqdm(range(len(_data) - seq_length)):
+        _data.iloc[0:self.seq_length][head_label] = 0
+        for idx in tqdm(range(len(_data) - self.seq_length)):
 
-            x = _data[idx:idx + seq_length][head_features].values
+            x = _data[idx:idx + self.seq_length][head_features].values
             # y = _data.iloc[idx + seq_length - 1][head_label]
 
             x = torch.tensor(x).unsqueeze(dim=0).float().to(self.device)
-            states = self.init_hidden_states(batch_size=1)
-            output = self(x, states)
-            if self.is_classification:
-                if not self.use_bceloss:
-                    output = F.softmax(output, dim=1)
-                    # output = torch.exp(output)
-                max_idx = torch.argmax(output).item()  # 0, 1, 2
-                conf = output[0][max_idx].item()
-                if max_idx == 1 and conf >= threshold:
-                    output = 1
-                elif max_idx == 2 and conf >= threshold:
-                    output = -1
-                else:
-                    output = 0
-            else:
-                output = output.item()
-            # print(output)
-            # print(y, output)
-            _data.loc[_data2.iloc[idx + seq_length - 1]["trade_date"], head_label] = output
+            y_hat = self.inference(x, threshold)
+
+            _data.loc[_data2.iloc[idx + self.seq_length - 1]["trade_date"], head_label] = y_hat
 
         return _data
 
@@ -258,10 +244,32 @@ class MyLSTM(nn.Module, ModelExt):
         self.load_model(pt_path)
         self.eval()
         # TODO
-        input_ = torch.randn((1, 32, 7)).float().to(self.device)
+        input_ = torch.randn((1, 64, 4)).float().to(self.device)
         states = self.init_hidden_states(batch_size=1)
         ts = torch.jit.trace(self, (input_, states))
         ts.save(jit_path)
+
+    def inference(self, input_data, threshold):
+        """
+        (1, seq_len, n_features)
+        """
+        input_data = input_data.to(self.device)
+        states = self.init_hidden_states(batch_size=1)
+        out_data = self(input_data, states)
+        if self.is_classification:
+            if not self.use_bceloss:
+                out_data = F.softmax(out_data, dim=1)
+            max_idx = torch.argmax(out_data).item()  # 0, 1, 2
+            conf = out_data[0][max_idx].item()
+            if max_idx == 1 and conf >= threshold:
+                out_data = 1
+            elif max_idx == 2 and conf >= threshold:
+                out_data = -1
+            else:
+                out_data = 0
+        else:
+            out_data = out_data.item()
+        return out_data
 
 
 if __name__ == '__main__':
