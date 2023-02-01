@@ -47,7 +47,7 @@ def extra_works(df_symbol: DataFrame, config: Type[AssetConfig]):
             if industry not in industries_exist:
                 f.write(f"{industry}\n")
 
-    LOGGER.info("save index info")
+    LOGGER.info("save index info")  # 各种指数信息，下载下来之后根据需求再单独下载需要的指数k线
     df_indexes = get_index_base(market=config.MARKET)
     df_indexes.to_csv(config.F_INDEX, index=False)
 

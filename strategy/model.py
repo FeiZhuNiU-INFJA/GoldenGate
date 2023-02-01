@@ -233,8 +233,8 @@ class MyLSTM(nn.Module, ModelExt):
             x = _data[idx:idx + self.seq_length][head_features].values
             # y = _data.iloc[idx + seq_length - 1][head_label]
 
-            x = torch.tensor(x).unsqueeze(dim=0).float().to(self.device)
-            y_hat = self.inference(x, threshold)
+            x = torch.tensor(x).unsqueeze(dim=0).float()
+            y_hat, conf = self.inference(x, threshold)
 
             _data.loc[_data2.iloc[idx + self.seq_length - 1]["trade_date"], head_label] = y_hat
 
@@ -268,8 +268,9 @@ class MyLSTM(nn.Module, ModelExt):
             else:
                 out_data = 0
         else:
+            # TODO
             out_data = out_data.item()
-        return out_data
+        return out_data, conf
 
 
 if __name__ == '__main__':

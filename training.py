@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import StepLR
 from strategy.model import MyLSTM
 from data.annotation import BuySellPointAnnotation
 from data.dataset import SingleSymbolDataset
-from config import anno1
+from config import anno1, BASE_FEATURES
 
 if __name__ == '__main__':
     device = torch.device("cuda:0")
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     VAL_START_DATE = "20220101"
     VAL_END_DATE = "20221231"
 
-    FEATURES_HEAD = ["open", "high", "low", "close"]
+    FEATURES_HEAD = BASE_FEATURES
     LABEL_HEAD = anno1.head_label
 
     train_dl_params = {'batch_size': BATCH_SIZE,
