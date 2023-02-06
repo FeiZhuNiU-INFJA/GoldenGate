@@ -20,8 +20,6 @@ def heat_score(date_str, interval, model: MyLSTM, exchange: Exchange):
         LOGGER.warning("Unknown exchange")
         return
     
-    
-
     def worker(f_csv):
         df = get_stock_df(f_stock=f_csv, date_str=date_str, interval=interval, strict=True)
         if df is None:
@@ -30,8 +28,6 @@ def heat_score(date_str, interval, model: MyLSTM, exchange: Exchange):
         x = torch.tensor(df.values).unsqueeze(dim=0).float()
         clz, conf = model.inference(input_data=x, threshold=0.5) # 1 buy -1 sell
         return clz
-
-    
 
     result = p_map(partial(worker), f_csvs,num_cpus=8, desc="calculate heat")
     n_to_buy = result.count(1)
@@ -44,6 +40,7 @@ def heat_score(date_str, interval, model: MyLSTM, exchange: Exchange):
 
 
 if __name__ == '__main__':
+    # 载入模型
     SEQ_LENGTH = 64
     FEATURES_HEAD = config.BASE_FEATURES
     HIDDEN_SIZE = 16
@@ -65,6 +62,7 @@ if __name__ == '__main__':
         seq_length=SEQ_LENGTH,
         weight="LSTM_seql64_best_baseline.pt",
     ).to(device)
+
     # 读取今天所有股票数据 
     heat = heat_score(date_str="2022-11-30", interval=SEQ_LENGTH, model=model, exchange=Exchange.SSE)
     print(heat)

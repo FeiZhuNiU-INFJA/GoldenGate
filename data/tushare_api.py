@@ -1,5 +1,6 @@
 from typing import Optional
 
+import pandas as pd
 import tushare as ts
 import sys
 from pathlib import Path
@@ -22,13 +23,16 @@ def get_symbols(exchange: Optional[Exchange] = None):
 3	600007.SH	600007	中国国贸	北京	园区开发	中国国际贸易中心股份有限公司	    主板	    SSE	        CNY	        L	        19990312	     H
 4	600008.SH	600008	首创环保	北京	环境保护	北京首创生态环保集团股份有限公司	主板	    SSE	        CNY	        L	        20000427	     H
     """
+    if exchange is None:
+        exchange = ""
     data = PRO.stock_basic(exchange=exchange, list_status='L',
                            fields='ts_code,symbol,name,area,industry,list_date,list_status,fullname,exchange,market,is_hs,curr_type')
     return data
 
 
-def get_trade_cal(exchange: Exchange):
+def get_trade_cal(exchange: Optional[Exchange] = None):
     """
+    https://tushare.pro/document/2?doc_id=26
     看上去是一年更新一次，最早的从19901219开始
      '0'休市 '1'交易
      @param exchange 看上去只有SSE和SZSE有数据
@@ -40,28 +44,37 @@ def get_trade_cal(exchange: Exchange):
     3	SSE	        19901222	0	    19901221
     4	SSE	        19901223	0	    19901221
     """
-    df = PRO.trade_cal(exchange=exchange, start_date='1989', end_date='2050')
+    if exchange is None:
+        exchange = ""
+    df = PRO.trade_cal(exchange=exchange, is_open="1", start_date='1989', end_date='2050')
     return df
 
 
 def get_symbol_hist(ts_code, start_date=None, end_date=None, interval=Interval.DAILY):
+    """
+    https://tushare.pro/document/2?doc_id=27
+    """
     # TODO 每次最多20年的数据
     df = PRO.query(interval, ts_code=ts_code, start_date=start_date, end_date=end_date)
     return df
 
 
-def get_index_base(market="SSE"):
+def get_index_base():
     """
+    指数基本信息，查看有哪些指数
     https://tushare.pro/document/2?doc_id=94
-    :param market:  SSE   SZSE  etc.
     :return:
     """
-    df = PRO.index_basic(market=market)
-    return df
+    dfs = []
+    for market in ["MSCI", "CSI", "SSE", "SZSE", "CICC", "SW", "OTH"]:
+        dfs.append(PRO.index_basic(market=market))
+    result = pd.concat(dfs, ignore_index=True)
+    return result
 
 
 def get_index(ts_code):
     """
+    获取指数日线
     000001.SH 上证指数
     :param ts_code:
     :return:
@@ -71,7 +84,9 @@ def get_index(ts_code):
 
 
 if __name__ == '__main__':
-    get_index_base()
+    df = get_trade_cal()
+    print(len(df))
+    pass
     # df = get_symbol_hist("000002.SZ", start_date="19800101", end_date="19971230")
     # print(df.head())
     # print(len(df))

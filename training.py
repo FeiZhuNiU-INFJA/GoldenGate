@@ -7,12 +7,12 @@ import tqdm
 import glob
 from torch.optim.lr_scheduler import StepLR
 from strategy.model import MyLSTM
-from data.annotation import BuySellPointAnnotation
 from data.dataset import SingleSymbolDataset
 from config import anno1, BASE_FEATURES
+from data.config import *
 
 if __name__ == '__main__':
-    device = torch.device("cuda:0")
+    device = torch.device("cpu")
     # HEADER_TARGET = "Y"
     SEQ_LENGTH = 64
     IS_CLASSIFICATION = True
@@ -46,11 +46,11 @@ if __name__ == '__main__':
     training_datasets = []
     validation_datasets = []
 
-    for f_sse in tqdm.tqdm(glob.glob("dataset/stock_sse/history/*.csv"),
-                           desc="loading sse data"):
+    for f_hist_csv in tqdm.tqdm(list(glob.glob(f"{DIR_DATA_HIST_CN}/*.csv")),
+                                desc="loading hist data"):
         training_datasets.append(
             SingleSymbolDataset(
-                f_hist=f_sse,
+                f_hist=f_hist_csv,
                 label_head=LABEL_HEAD,
                 features_head=FEATURES_HEAD,
                 start_date=TRAIN_START_DATE,
@@ -58,13 +58,13 @@ if __name__ == '__main__':
                 seq_len=SEQ_LENGTH,
                 is_classification=True,
                 is_one_hot_label=False,
-                n_classes=BuySellPointAnnotation.n_class(),
-                func_label_to_class=BuySellPointAnnotation.label_to_class,
+                n_classes=anno1.n_class(),
+                func_label_to_class=anno1.label_to_class,
             )
         )
         validation_datasets.append(
             SingleSymbolDataset(
-                f_hist=f_sse,
+                f_hist=f_hist_csv,
                 label_head=LABEL_HEAD,
                 features_head=FEATURES_HEAD,
                 start_date=VAL_START_DATE,
@@ -72,39 +72,8 @@ if __name__ == '__main__':
                 seq_len=SEQ_LENGTH,
                 is_classification=True,
                 is_one_hot_label=False,
-                n_classes=BuySellPointAnnotation.n_class(),
-                func_label_to_class=BuySellPointAnnotation.label_to_class,
-            )
-        )
-
-    for f_szse in tqdm.tqdm(glob.glob("dataset/stock_szse/history/*.csv"),
-                            desc="loading szse data"):
-        training_datasets.append(
-            SingleSymbolDataset(
-                f_hist=f_szse,
-                label_head=LABEL_HEAD,
-                features_head=FEATURES_HEAD,
-                start_date=TRAIN_START_DATE,
-                end_date=TRAIN_END_DATE,
-                seq_len=SEQ_LENGTH,
-                is_classification=True,
-                is_one_hot_label=False,
-                n_classes=BuySellPointAnnotation.n_class(),
-                func_label_to_class=BuySellPointAnnotation.label_to_class,
-            )
-        )
-        validation_datasets.append(
-            SingleSymbolDataset(
-                f_hist=f_szse,
-                label_head=LABEL_HEAD,
-                features_head=FEATURES_HEAD,
-                start_date=VAL_START_DATE,
-                end_date=VAL_END_DATE,
-                seq_len=SEQ_LENGTH,
-                is_classification=True,
-                is_one_hot_label=False,
-                n_classes=BuySellPointAnnotation.n_class(),
-                func_label_to_class=BuySellPointAnnotation.label_to_class,
+                n_classes=anno1.n_class(),
+                func_label_to_class=anno1.label_to_class,
             )
         )
 
