@@ -254,9 +254,8 @@ def worker_anno_buysellpoint(f_csv):
 
 
 if __name__ == '__main__':
+    from data.config import DIR_DATA_HIST_CN
+    CN_stocks = list(glob.glob(f"{DIR_DATA_HIST_CN}/*.csv"))
 
-    SSE_stocks = list(glob.glob(f"{ROOT}/dataset/stock_sse/history/*.csv"))
-    SZSE_stocks = list(glob.glob(f"{ROOT}/dataset/stock_szse/history/*.csv"))
-
-    p_umap(worker_anno_buysellpoint, SSE_stocks + SZSE_stocks, desc="Label Buy Sell Point", num_cpus=8)
+    p_umap(worker_anno_buysellpoint, CN_stocks, desc="Label Buy Sell Point", num_cpus=8)
     # anno.generate_labeled_data(df, f_target="600000.SH.csv")
