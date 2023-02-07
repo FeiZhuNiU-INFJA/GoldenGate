@@ -1,5 +1,5 @@
 from functools import partial
-from data.base import Exchange
+from data.base import Exchange, Market
 import config
 from common.logger import LOGGER
 from data.utils import get_stock_df
@@ -8,24 +8,22 @@ import torch
 from p_tqdm import p_umap, p_map
 
 
-def heat_score(date_str, interval, model: MyLSTM, exchange: Exchange):
+def heat_score(date_str, interval, model: MyLSTM, market: Market):
     """
     计算某一天某个市场的热度
     """
-    if exchange == Exchange.SSE:
-        f_csvs = config.CSV_SSE_STOCKS
-    elif exchange == Exchange.SZSE:
-        f_csvs = config.CSV_SZSE_STOCKS
-    else:
-        LOGGER.warning("Unknown exchange")
-        return
+    df_symbol =
     
     def worker(f_csv):
         df = get_stock_df(f_stock=f_csv, date_str=date_str, interval=interval, strict=True)
         if df is None:
             return
         df = df[config.BASE_FEATURES]
-        x = torch.tensor(df.values).unsqueeze(dim=0).float()
+        x = df.values
+        x[:,0:4] /= x[0][0]
+        x[:,4] /= x[0][4]
+        x[:,5] /= x[0][5]
+        x = torch.tensor(x).unsqueeze(dim=0).float()
         clz, conf = model.inference(input_data=x, threshold=0.5) # 1 buy -1 sell
         return clz
 

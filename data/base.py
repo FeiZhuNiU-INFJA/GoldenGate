@@ -99,3 +99,7 @@ class DataBlock:
             if c not in columns:
                 LOGGER.error(f"data should contain columns: {self.default_columns}")
                 raise ValueError(f"data should contain columns: {self.default_columns}")
+
+
+if __name__ == "__main__":
+    print(Market.ZB == "主板")

@@ -47,7 +47,7 @@ class SingleSymbolDataset(Dataset):
 
     def __getitem__(self, idx):
         x = self.hist[idx:idx + self.seq_len][self.features_head].values
-        # TODO 归一化
+        # 归一化 以第一天的开盘价为基准
         x[:, 0:4] /= x[0][0]
         x[:, 4] /= x[0][4]
         x[:, 5] /= x[0][5]

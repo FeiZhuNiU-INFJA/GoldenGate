@@ -38,7 +38,7 @@ if __name__ == '__main__':
                        'drop_last': True,  # Disregard last incomplete batch
                        'num_workers': 8}
 
-    val_dl_params = {'batch_size': 1,
+    val_dl_params = {'batch_size': BATCH_SIZE,
                      'shuffle': False,
                      'drop_last': False,
                      'num_workers': 8}
@@ -76,7 +76,7 @@ if __name__ == '__main__':
                 func_label_to_class=anno1.label_to_class,
             )
         )
-
+    validation_datasets = validation_datasets[::50]
     training_dl = DataLoader(ConcatDataset(training_datasets), pin_memory=True, **train_dl_params)
     validation_dl = DataLoader(ConcatDataset(validation_datasets), pin_memory=True, **val_dl_params)
     print(f"training data: {len(training_dl) * BATCH_SIZE}, validation data: {len(validation_dl)}")
