@@ -68,9 +68,9 @@ class MyLSTM(nn.Module, ModelExt):
         if weight:
             self.load_model(path=weight)
 
-    def init_hidden_states(self, batch_size):
-        _state_dim = (self.num_layers * self.directions, batch_size, self.hidden_size)
-        return torch.zeros(_state_dim).to(self.device), torch.zeros(_state_dim).to(self.device)
+    # def init_hidden_states(self, batch_size):
+    #     _state_dim = (self.num_layers * self.directions, batch_size, self.hidden_size)
+    #     return torch.zeros(_state_dim).to(self.device), torch.zeros(_state_dim).to(self.device)
 
     def forward(self, x, states=None):
         x, (h, c) = self.lstm(x, states)
@@ -117,18 +117,14 @@ class MyLSTM(nn.Module, ModelExt):
     ):
         training_losses = []
         validation_losses = []
-        y_trues = []
-        y_predicts = []
-        y_confidences = []
         min_validation_loss = np.Inf
 
-        # Set to train mode
-        self.train()
-
         for epoch in tqdm(range(epochs), desc="epoch"):
+            # Set to train mode
+            self.train()
 
             running_training_loss = 0.0
-            states = self.init_hidden_states(batch_size)
+
             # Begin training
             for idx, (x_batch, y_batch) in enumerate(tqdm(training_dl, desc="training")):
                 # Convert to Tensors
@@ -137,18 +133,16 @@ class MyLSTM(nn.Module, ModelExt):
                     y_batch = y_batch.long().to(self.device)
                 else:
                     y_batch = y_batch.float().to(self.device)
-
-                states = [state.detach() for state in states]
                 optimizer.zero_grad()
                 # Make prediction
-                output = self(x_batch, states)
+                output = self(x_batch)
                 # Calculate loss
                 loss = criterion(output, y_batch)
                 # print(f"training: {F.softmax(output, dim=1) if not USE_BCELOSS else output, y_batch}")
                 loss.backward()
                 running_training_loss += loss.item()
 
-                torch.nn.utils.clip_grad_norm_(self.parameters(), 20)
+                # torch.nn.utils.clip_grad_norm_(self.parameters(), 20)
                 optimizer.step()
                 scheduler.step()
 
@@ -156,9 +150,12 @@ class MyLSTM(nn.Module, ModelExt):
             training_losses.append(running_training_loss / len(training_dl))
 
             if epoch % validate_every_n_epoch == 0:
+                y_trues = []
+                y_predicts = []
+                y_confidences = []
                 self.eval()
                 with torch.no_grad():
-                    validation_states = self.init_hidden_states(validate_batch_size)
+
                     running_validation_loss = 0.0
 
                     for idx, (x_batch, y_batch) in enumerate(tqdm(validation_dl, desc="validation")):
@@ -168,8 +165,9 @@ class MyLSTM(nn.Module, ModelExt):
                             y_batch = y_batch.long().to(self.device)
                         else:
                             y_batch = y_batch.float().to(self.device)
-                        validation_states = [state.detach() for state in validation_states]
-                        output = self(x_batch, validation_states)
+                        # validation_states = self.init_hidden_states(validate_batch_size)
+                        # validation_states = [state.detach() for state in validation_states]
+                        output = self(x_batch)
                         validation_loss = criterion(output, y_batch)
 
                         output_softmax = torch.nn.Softmax(dim=1)(output)
@@ -194,12 +192,10 @@ class MyLSTM(nn.Module, ModelExt):
 
                 if is_best:
                     min_validation_loss = cur_val_loss
-                    self.save_model(epoch + 1, min_validation_loss, optimizer, f"./{self.model_name}_best.pt")
-                # Reset to training mode
-                self.train()
+                    self.save_model(epoch + 1, min_validation_loss, optimizer, f"./mylstm_best.pt")
 
             cur_train_loss = running_training_loss / len(training_dl)
-            self.save_model(epoch + 1, cur_train_loss, optimizer, f"./{self.model_name}_last.pt")
+            self.save_model(epoch + 1, cur_train_loss, optimizer, f"./mylstm_last.pt")
             print(f"train loss: {cur_train_loss}")
 
         # Visualize loss

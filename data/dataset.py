@@ -51,13 +51,13 @@ class SingleSymbolDataset(Dataset):
         x[:, 0:4] /= x[0][0]
         x[:, 4] /= x[0][4]
         x[:, 5] /= x[0][5]
+        x[:, :] -= 1
         y = self.hist.iloc[idx + self.seq_len - 1][self.label_head]
 
         if self.is_classification:
             y = self.func_label_to_class(y)
             if self.is_one_hot_label:
                 y = F.one_hot(torch.tensor(y), num_classes=self.n_classes)
-
         return x, y
 
 

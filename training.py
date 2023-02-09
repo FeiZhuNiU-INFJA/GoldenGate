@@ -21,7 +21,7 @@ if __name__ == '__main__':
     NUM_LAYERS = 2
     DROPOUT = 0.1
     DIRECTIONS = 2
-    LEARNING_RATE = 0.0001
+    LEARNING_RATE = 0.0005
     RESUME = False
     EPOCHS = 10
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
                        'drop_last': True,  # Disregard last incomplete batch
                        'num_workers': 8}
 
-    val_dl_params = {'batch_size': BATCH_SIZE,
+    val_dl_params = {'batch_size': 1,
                      'shuffle': False,
                      'drop_last': False,
                      'num_workers': 8}
