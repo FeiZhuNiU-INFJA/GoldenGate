@@ -1,33 +1,37 @@
+import glob
 from functools import partial
 from data.base import Exchange, Market
 import config
 from common.logger import LOGGER
-from data.utils import get_stock_df
+from data.config import DIR_DATA_HIST_CN
+from data.utils import get_stock_df, get_df_symbols
 from strategy.model import MyLSTM
 import torch
 from p_tqdm import p_umap, p_map
 
 
-def heat_score(date_str, interval, model: MyLSTM, market: Market):
+def heat_score(date_str, interval, model: MyLSTM, market: Market=None):
     """
     计算某一天某个市场的热度
     """
-    df_symbol =
-    
     def worker(f_csv):
         df = get_stock_df(f_stock=f_csv, date_str=date_str, interval=interval, strict=True)
         if df is None:
             return
-        df = df[config.BASE_FEATURES]
+        df = df[config.BASE_FEATURES[0:4]]
         x = df.values
         x[:,0:4] /= x[0][0]
-        x[:,4] /= x[0][4]
-        x[:,5] /= x[0][5]
+        # x[:,4] /= x[0][4]
+        # x[:,5] /= x[0][5]
         x = torch.tensor(x).unsqueeze(dim=0).float()
         clz, conf = model.inference(input_data=x, threshold=0.5) # 1 buy -1 sell
         return clz
+    # 根据market过滤出股票
 
-    result = p_map(partial(worker), f_csvs,num_cpus=8, desc="calculate heat")
+    df_symbols = get_df_symbols(market=market)
+    ts_codes = df_symbols.ts_code.tolist()
+    f_csvs = [f"{DIR_DATA_HIST_CN}/{ts_code}.csv" for ts_code in ts_codes]
+    result = p_map(partial(worker), f_csvs, num_cpus=8, desc="calculate heat")
     n_to_buy = result.count(1)
     n_to_sell = result.count(-1)
     total = len(f_csvs)
@@ -40,7 +44,7 @@ def heat_score(date_str, interval, model: MyLSTM, market: Market):
 if __name__ == '__main__':
     # 载入模型
     SEQ_LENGTH = 64
-    FEATURES_HEAD = config.BASE_FEATURES
+    FEATURES_HEAD = config.BASE_FEATURES[0:4]
     HIDDEN_SIZE = 16
     NUM_LAYERS = 2
     DROPOUT = 0.1
@@ -62,7 +66,7 @@ if __name__ == '__main__':
     ).to(device)
 
     # 读取今天所有股票数据 
-    heat = heat_score(date_str="2022-11-30", interval=SEQ_LENGTH, model=model, exchange=Exchange.SSE)
+    heat = heat_score(date_str="2022-11-30", interval=SEQ_LENGTH, model=model, market=Market.ZB)
     print(heat)
     # 模型推理
 

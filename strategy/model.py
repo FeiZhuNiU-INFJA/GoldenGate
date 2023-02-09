@@ -250,8 +250,8 @@ class MyLSTM(nn.Module, ModelExt):
         (1, seq_len, n_features)
         """
         input_data = input_data.to(self.device)
-        states = self.init_hidden_states(batch_size=1)
-        out_data = self(input_data, states)
+        # states = self.init_hidden_states(batch_size=1)
+        out_data = self(input_data)
         if self.is_classification:
             if not self.use_bceloss:
                 out_data = F.softmax(out_data, dim=1)

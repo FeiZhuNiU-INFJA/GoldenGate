@@ -1,5 +1,3 @@
-import pandas as pd
-
 from data.base import *
 from data.config import *
 
@@ -27,13 +25,13 @@ def get_stock_df(f_stock, date_str: str = None, strict=True, interval: int = Non
     return df
 
 
-def get_symbols(market: Market = None):
+def get_df_symbols(market: Market = None):
     df = pd.read_csv(FILE_SYMBOLS_CN)
     if market is not None:
-        df = df[df["market"]==market]
+        df = df[df["market"] == market]
     return df
 
 
 if __name__ == "__main__":
-    print(get_symbols(market=Market.ZB).head())
+    print(get_df_symbols(market=Market.ZB).head())
 
