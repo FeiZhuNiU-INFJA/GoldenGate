@@ -8,7 +8,6 @@ from strategy.model import MyLSTM
 from config import BASE_FEATURES
 from data.config import DIR_DATA_HIST_CN
 SEQ_LENGTH = 64
-# FEATURES_HEAD = ["open", "high", "low", "close"]
 HIDDEN_SIZE = 16
 NUM_LAYERS = 2
 DROPOUT = 0.1
@@ -19,7 +18,7 @@ device = torch.device("cpu")
 
 if __name__ == '__main__':
     # f_stock = "600000.SH.csv"
-    f_stock = f"{DIR_DATA_HIST_CN}/002594.SZ.csv"
+    f_stock = f"{DIR_DATA_HIST_CN}/600036.SH.csv"
     df = pd.read_csv(f_stock)
     df.set_index("trade_date", inplace=True)
     df.index = pd.to_datetime(df.index, format='%Y%m%d')

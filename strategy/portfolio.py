@@ -1,13 +1,11 @@
-import glob
 from functools import partial
 from data.base import Exchange, Market
 import config
-from common.logger import LOGGER
 from data.config import DIR_DATA_HIST_CN
 from data.utils import get_stock_df, get_df_symbols
 from strategy.model import MyLSTM
 import torch
-from p_tqdm import p_umap, p_map
+from p_tqdm import p_map
 
 
 def heat_score(date_str, interval, model: MyLSTM, market: Market=None):
@@ -17,14 +15,15 @@ def heat_score(date_str, interval, model: MyLSTM, market: Market=None):
     def worker(f_csv):
         df = get_stock_df(f_stock=f_csv, date_str=date_str, interval=interval, strict=True)
         if df is None:
-            return
-        df = df[config.BASE_FEATURES[0:4]]
+            return None
+        df = df[config.BASE_FEATURES]
         x = df.values
         x[:,0:4] /= x[0][0]
-        # x[:,4] /= x[0][4]
-        # x[:,5] /= x[0][5]
+        x[:,4] /= x[0][4]
+        x[:,5] /= x[0][5]
+        x[:,:] -= 1
         x = torch.tensor(x).unsqueeze(dim=0).float()
-        clz, conf = model.inference(input_data=x, threshold=0.5) # 1 buy -1 sell
+        clz, conf = model.inference(input_data=x, threshold=0.5)  # 1 buy -1 sell
         return clz
     # 根据market过滤出股票
 
@@ -32,6 +31,7 @@ def heat_score(date_str, interval, model: MyLSTM, market: Market=None):
     ts_codes = df_symbols.ts_code.tolist()
     f_csvs = [f"{DIR_DATA_HIST_CN}/{ts_code}.csv" for ts_code in ts_codes]
     result = p_map(partial(worker), f_csvs, num_cpus=8, desc="calculate heat")
+    # TODO 用置信度来加成
     n_to_buy = result.count(1)
     n_to_sell = result.count(-1)
     total = len(f_csvs)
@@ -44,7 +44,7 @@ def heat_score(date_str, interval, model: MyLSTM, market: Market=None):
 if __name__ == '__main__':
     # 载入模型
     SEQ_LENGTH = 64
-    FEATURES_HEAD = config.BASE_FEATURES[0:4]
+    FEATURES_HEAD = config.BASE_FEATURES
     HIDDEN_SIZE = 16
     NUM_LAYERS = 2
     DROPOUT = 0.1
@@ -62,11 +62,11 @@ if __name__ == '__main__':
         use_bceloss=False,
         device=device,
         seq_length=SEQ_LENGTH,
-        weight="LSTM_seql64_best_baseline.pt",
+        weight="mylstm_last.pt",
     ).to(device)
 
     # 读取今天所有股票数据 
-    heat = heat_score(date_str="2022-11-30", interval=SEQ_LENGTH, model=model, market=Market.ZB)
+    heat = heat_score(date_str="20230203", interval=SEQ_LENGTH, model=model, market=Market.CYB)
     print(heat)
     # 模型推理
 

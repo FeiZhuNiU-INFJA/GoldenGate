@@ -96,7 +96,7 @@ class MyLSTM(nn.Module, ModelExt):
 
     def load_model(self, path, opt=None):
         # load check point
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location=self.device)
         min_val_loss = checkpoint["min_val_loss"]
         self.load_state_dict(checkpoint["model_state"])
         if opt is not None:
