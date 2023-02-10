@@ -5,9 +5,10 @@ import pandas as pd
 
 from config import anno1
 from strategy.model import MyLSTM
-
+from config import BASE_FEATURES
+from data.config import DIR_DATA_HIST_CN
 SEQ_LENGTH = 64
-FEATURES_HEAD = ["open", "high", "low", "close"]
+# FEATURES_HEAD = ["open", "high", "low", "close"]
 HIDDEN_SIZE = 16
 NUM_LAYERS = 2
 DROPOUT = 0.1
@@ -18,14 +19,15 @@ device = torch.device("cpu")
 
 if __name__ == '__main__':
     # f_stock = "600000.SH.csv"
-    f_stock = "dataset/stock_sse/history/601375.SH.csv"
+    f_stock = f"{DIR_DATA_HIST_CN}/002594.SZ.csv"
     df = pd.read_csv(f_stock)
     df.set_index("trade_date", inplace=True)
     df.index = pd.to_datetime(df.index, format='%Y%m%d')
-    df = df[FEATURES_HEAD + [anno1.head_label]]  # trade_date 用于可视化
+    df = df["20220101":]
+    df = df[BASE_FEATURES + [anno1.head_label]]  # trade_date 用于可视化
 
     model = MyLSTM(
-        input_size=len(FEATURES_HEAD),
+        input_size=len(BASE_FEATURES),
         hidden_size=HIDDEN_SIZE,
         num_layers=NUM_LAYERS,
         dropout_prob=DROPOUT,
@@ -35,14 +37,14 @@ if __name__ == '__main__':
         use_bceloss=False,
         device=device,
         seq_length=SEQ_LENGTH,
-        weight="LSTM_seql64_best_baseline.pt",
+        weight="myLSTM_last.pt",
     ).to(device)
 
     result = model.test_model(
         data=df,
         threshold=0.8,
         head_label=anno1.head_label,
-        head_features=FEATURES_HEAD
+        head_features=BASE_FEATURES
     )
 
     anno1.visualize(result)
