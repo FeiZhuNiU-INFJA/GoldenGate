@@ -133,18 +133,19 @@ class MyLSTM(nn.Module, ModelExt):
                     y_batch = y_batch.long().to(self.device)
                 else:
                     y_batch = y_batch.float().to(self.device)
-                optimizer.zero_grad()
+
                 # Make prediction
                 output = self(x_batch)
                 # Calculate loss
                 loss = criterion(output, y_batch)
                 # print(f"training: {F.softmax(output, dim=1) if not USE_BCELOSS else output, y_batch}")
+                optimizer.zero_grad()
                 loss.backward()
                 running_training_loss += loss.item()
 
                 # torch.nn.utils.clip_grad_norm_(self.parameters(), 20)
                 optimizer.step()
-                scheduler.step()
+            scheduler.step()
 
             # Average loss across timesteps
             training_losses.append(running_training_loss / len(training_dl))
@@ -227,6 +228,10 @@ class MyLSTM(nn.Module, ModelExt):
         for idx in tqdm(range(len(_data) - self.seq_length)):
 
             x = _data[idx:idx + self.seq_length][head_features].values
+            x[:, 0:4] /= x[0][0]
+            x[:, 4] /= x[0][4]
+            x[:, 5] /= x[0][5]
+            x[:, :] -= 1
             # y = _data.iloc[idx + seq_length - 1][head_label]
 
             x = torch.tensor(x).unsqueeze(dim=0).float()
