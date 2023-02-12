@@ -1,3 +1,7 @@
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).parents[1]))
 from functools import partial
 from data.base import Exchange, Market
 import config
@@ -66,7 +70,7 @@ if __name__ == '__main__':
     ).to(device)
 
     # 读取今天所有股票数据 
-    heat = heat_score(date_str="20230203", interval=SEQ_LENGTH, model=model, market=Market.CYB)
+    heat = heat_score(date_str="20230116", interval=SEQ_LENGTH, model=model, market=Market.ZB)
     print(heat)
     # 模型推理
 

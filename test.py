@@ -18,7 +18,7 @@ device = torch.device("cpu")
 
 if __name__ == '__main__':
     # f_stock = "600000.SH.csv"
-    f_stock = f"{DIR_DATA_HIST_CN}/600036.SH.csv"
+    f_stock = f"{DIR_DATA_HIST_CN}/002679.SZ.csv"
     df = pd.read_csv(f_stock)
     df.set_index("trade_date", inplace=True)
     df.index = pd.to_datetime(df.index, format='%Y%m%d')
@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
     result = model.test_model(
         data=df,
-        threshold=0.8,
+        threshold=0.75,
         head_label=anno1.head_label,
         head_features=BASE_FEATURES
     )
