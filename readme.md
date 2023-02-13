@@ -1,6 +1,6 @@
 ## 下载数据
 ```py
-python data/initaialization.py 
+python data/initialization.py 
 ```
 ## 生成标签
 ```py

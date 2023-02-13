@@ -250,7 +250,7 @@ class MyLSTM(nn.Module, ModelExt):
         ts = torch.jit.trace(self, (input_, states))
         ts.save(jit_path)
 
-    def inference(self, input_data, threshold):
+    def inference(self, input_data, threshold=None):
         """
         (1, seq_len, n_features)
         """
@@ -262,6 +262,8 @@ class MyLSTM(nn.Module, ModelExt):
                 out_data = F.softmax(out_data, dim=1)
             max_idx = torch.argmax(out_data).item()  # 0, 1, 2
             conf = out_data[0][max_idx].item()
+            if threshold is None:
+                return {1: 1, 2: -1, 0: 0}.get(max_idx), conf
             if max_idx == 1 and conf >= threshold:
                 out_data = 1
             elif max_idx == 2 and conf >= threshold:

@@ -68,7 +68,7 @@ def init_stock_CN():
     df = get_index("000001.SH")
     df.to_csv(STOCK_CN_HOME / "上证指数.csv", index=False)
     # 获取2000年以后得日线数据
-    p_umap(partial(_download_hist_data, overwrite=False), df_symbol.ts_code, num_cpus=4, desc="get history data")
+    p_umap(partial(_download_hist_data, overwrite=True), df_symbol.ts_code, num_cpus=4, desc="get history data")
 
 
 if __name__ == '__main__':
