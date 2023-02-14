@@ -75,6 +75,20 @@ class Annotation(metaclass=ABCMeta):
         pass
 
 
+class ModelAnnotation(Annotation):
+
+    @property
+    def head_label(self):
+        return "MyLSTM"
+
+    def _labeling(self, data: pd.DataFrame, **kwargs) -> pd.Series:
+
+        pass
+
+    def visualize(self, data_with_label: pd.DataFrame, **kwargs):
+        pass
+
+
 class BuySellPointAnnotation(Annotation, Classiable):
 
     def __init__(self,
