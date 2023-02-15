@@ -1,13 +1,10 @@
 from typing import List
 
 import torch
-from torch.utils.data import Dataset, DataLoader, ConcatDataset
+from torch.utils.data import Dataset
 import pandas as pd
-import tqdm
-import glob
 import torch.nn.functional as F
-
-from data.config import DIR_DATA_HIST_CN
+import numpy as np
 
 
 class SingleSymbolDataset(Dataset):
@@ -47,6 +44,7 @@ class SingleSymbolDataset(Dataset):
 
     def __getitem__(self, idx):
         x = self.hist[idx:idx + self.seq_len][self.features_head].values
+        x = x + x * (np.random.random(x.shape) / 500 - 0.001)  # 添加0.1%的噪声
         # 归一化 以第一天的开盘价为基准
         x[:, 0:4] /= x[0][0]
         x[:, 4] /= x[0][4]
