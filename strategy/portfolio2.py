@@ -12,30 +12,6 @@ import torch
 from p_tqdm import p_map
 import traceback
 
-# 载入模型
-SEQ_LENGTH = 64
-FEATURES_HEAD = config.BASE_FEATURES
-HIDDEN_SIZE = 16
-NUM_LAYERS = 2
-DROPOUT = 0.1
-DIRECTIONS = 2
-IS_CLASSIFICATION = True
-device = torch.device("cpu")
-model = MyLSTM(
-    input_size=len(FEATURES_HEAD),
-    hidden_size=HIDDEN_SIZE,
-    num_layers=NUM_LAYERS,
-    dropout_prob=DROPOUT,
-    directions=DIRECTIONS,
-    is_classification=IS_CLASSIFICATION,
-    n_classes=config.anno1.n_class(),
-    use_bceloss=False,
-    device=device,
-    seq_length=SEQ_LENGTH,
-    weight="mylstm_epoch_12.pt",
-    # weight="mylstm_last.pt",
-).to(device)
-
 
 def heat(date_str, interval, model: MyLSTM, market: Market=None):
     """
@@ -71,7 +47,8 @@ def get_top_n_to_buy_sell(date_str, topN=20):
     df_symbols = get_df_symbols()
     df_symbols.set_index("ts_code", inplace=True)
     # 读取今天所有股票数据
-    scores = heat(date_str=date_str, interval=SEQ_LENGTH, model=model, market=None)
+    model = config.model1
+    scores = heat(date_str=date_str, interval=model.seq_length, model=model, market=None)
     to_buy = list(filter(lambda x: x[1] == 1, scores))
     to_buy = list(filter(lambda x: "ST" not in df_symbols.loc[x[0]]["name"], to_buy))
     to_buy = sorted(to_buy, key=lambda x: x[2], reverse=True)
@@ -85,6 +62,6 @@ def get_top_n_to_buy_sell(date_str, topN=20):
 
 if __name__ == '__main__':
     # 找到买入和卖出信号最强的20只股票
-    get_top_n_to_buy_sell("20230214")
+    get_top_n_to_buy_sell("20230215")
 
     pass
