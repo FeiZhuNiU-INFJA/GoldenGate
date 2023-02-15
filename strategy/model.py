@@ -193,10 +193,10 @@ class MyLSTM(nn.Module, ModelExt):
 
                 if is_best:
                     min_validation_loss = cur_val_loss
-                    self.save_model(epoch + 1, min_validation_loss, optimizer, f"./mylstm_best.pt")
+                    self.save_model(epoch + 1, min_validation_loss, optimizer, f"./checkpoints/mylstm_best_{epoch}.pt")
 
             cur_train_loss = running_training_loss / len(training_dl)
-            self.save_model(epoch + 1, cur_train_loss, optimizer, f"./mylstm_last.pt")
+            self.save_model(epoch + 1, cur_train_loss, optimizer, f"./checkpoints/mylstm_epoch_{epoch}.pt")
             print(f"train loss: {cur_train_loss}")
 
         # Visualize loss

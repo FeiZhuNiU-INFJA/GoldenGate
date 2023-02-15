@@ -21,14 +21,14 @@ if __name__ == '__main__':
     NUM_LAYERS = 2
     DROPOUT = 0.1
     DIRECTIONS = 2
-    LEARNING_RATE = 0.0005
+    LEARNING_RATE = 0.0008
     RESUME = False
-    EPOCHS = 10
+    EPOCHS = 30
 
     TRAIN_START_DATE = "20000101"
-    TRAIN_END_DATE = "20220101"
+    TRAIN_END_DATE = "20221231"
     VAL_START_DATE = "20220101"
-    VAL_END_DATE = "20221231"
+    VAL_END_DATE = "20230213"
 
     FEATURES_HEAD = BASE_FEATURES
     LABEL_HEAD = anno1.head_label
@@ -60,6 +60,7 @@ if __name__ == '__main__':
                 is_one_hot_label=False,
                 n_classes=anno1.n_class(),
                 func_label_to_class=anno1.label_to_class,
+                with_aug=True,
             )
         )
         validation_datasets.append(
@@ -74,6 +75,7 @@ if __name__ == '__main__':
                 is_one_hot_label=False,
                 n_classes=anno1.n_class(),
                 func_label_to_class=anno1.label_to_class,
+                with_aug=False,
             )
         )
     validation_datasets = validation_datasets[::50]
@@ -97,7 +99,7 @@ if __name__ == '__main__':
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=0.0001)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
     if IS_CLASSIFICATION:
-        criterion = nn.CrossEntropyLoss(weight=torch.tensor([1, 25., 25.]).float()).to(device)
+        criterion = nn.CrossEntropyLoss(weight=torch.tensor([1, 40., 40.]).float()).to(device)
     else:
         criterion = nn.MSELoss().to(device)
 

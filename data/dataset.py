@@ -20,6 +20,7 @@ class SingleSymbolDataset(Dataset):
                  is_one_hot_label: bool = False,
                  func_label_to_class=None,  # 用于把label转换成类别的方法
                  n_classes: int = 3,
+                 with_aug=False,
                  ):
         self.f_hist = f_hist
         self.label_head = label_head  # 标签对应的head
@@ -31,6 +32,7 @@ class SingleSymbolDataset(Dataset):
         self.is_classification = is_classification and func_label_to_class is not None
         self.is_one_hot_label = is_one_hot_label
         self.n_classes = n_classes
+        self.with_aug = with_aug
 
         self.hist = pd.read_csv(f_hist)
         # 根据start_date, end_date过滤出数据
@@ -44,7 +46,8 @@ class SingleSymbolDataset(Dataset):
 
     def __getitem__(self, idx):
         x = self.hist[idx:idx + self.seq_len][self.features_head].values
-        x = x + x * (np.random.random(x.shape) / 500 - 0.001)  # 添加0.1%的噪声
+        if self.with_aug:
+            x = x + x * (np.random.random(x.shape) / 500 - 0.001)  # 添加0.1%的噪声
         # 归一化 以第一天的开盘价为基准
         x[:, 0:4] /= x[0][0]
         x[:, 4] /= x[0][4]
