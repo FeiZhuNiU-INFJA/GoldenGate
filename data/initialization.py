@@ -1,4 +1,5 @@
 import sys
+import traceback
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parents[1]))
@@ -19,6 +20,7 @@ def _download_hist_data(ts_code, retry=3, overwrite=True):
     :return:
     """
     if retry == 0:
+        print(ts_code)
         return
     try:
         if not overwrite and (DIR_DATA_HIST_CN / f"{ts_code}.csv").exists():
@@ -29,7 +31,8 @@ def _download_hist_data(ts_code, retry=3, overwrite=True):
         df.to_csv(DIR_DATA_HIST_CN / f"{ts_code}.csv")
 
     except:
-        print(ts_code)
+        # print(ts_code)
+        # print(traceback.format_exc())
         _download_hist_data(ts_code, retry=retry - 1, overwrite=overwrite)
 
 
@@ -74,9 +77,7 @@ def init_stock_CN():
 if __name__ == '__main__':
     init_stock_CN()
     # # 补充
-    # download_hist_data("688172.SH", config=SSEConfig)
-    # download_hist_data("301265.SZ", config=SZSEConfig)
+    # _download_hist_data("000576.SZ")
+    # _download_hist_data("000581.SZ")
+    # _download_hist_data("000607.SZ")
 
-    # download_hist_data("600363.SH", config=SSEConfig)
-    # download_hist_data("600785.SH", config=SSEConfig)
-    # download_hist_data("001223.SZ", config=SZSEConfig)

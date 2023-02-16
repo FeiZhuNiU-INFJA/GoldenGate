@@ -35,3 +35,4 @@ model1 = MyLSTM(
     weight="mylstm_epoch_12.pt",
     # weight="mylstm_last.pt",
 ).to(device)
+model1.eval()
