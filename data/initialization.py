@@ -7,7 +7,8 @@ from data.tushare_api import *
 from data.config import *
 from data.base import *
 from functools import partial
-from p_tqdm import p_umap
+from p_tqdm import p_map
+import numpy as np
 
 # TODO 每次只能取6000条数据  未来可能有问题
 start_date = "20000101"
@@ -20,19 +21,17 @@ def _download_hist_data(ts_code, retry=3, overwrite=True):
     :return:
     """
     if retry == 0:
-        print(ts_code)
-        return
+        return 0
     try:
         if not overwrite and (DIR_DATA_HIST_CN / f"{ts_code}.csv").exists():
-            return
+            return 1
         df = get_symbol_hist(ts_code=ts_code, start_date=start_date)
         df.set_index("trade_date", inplace=True)
         df.sort_index(inplace=True)
         df.to_csv(DIR_DATA_HIST_CN / f"{ts_code}.csv")
+        return 1
 
     except:
-        # print(ts_code)
-        # print(traceback.format_exc())
         _download_hist_data(ts_code, retry=retry - 1, overwrite=overwrite)
 
 
@@ -71,7 +70,15 @@ def init_stock_CN():
     df = get_index("000001.SH")
     df.to_csv(STOCK_CN_HOME / "上证指数.csv", index=False)
     # 获取2000年以后得日线数据
-    p_umap(partial(_download_hist_data, overwrite=True), df_symbol.ts_code, num_cpus=4, desc="get history data")
+    targets = df_symbol.ts_code
+    while len(targets) > 0:
+        print(f"left: {len(targets)}")
+        results = p_map(partial(_download_hist_data, overwrite=True),
+                        targets,
+                        num_cpus=6,
+                        desc="get history data")
+        print(results)
+        targets = np.array(targets)[np.array(results) == 0].tolist()
 
 
 if __name__ == '__main__':
@@ -80,4 +87,3 @@ if __name__ == '__main__':
     # _download_hist_data("000576.SZ")
     # _download_hist_data("000581.SZ")
     # _download_hist_data("000607.SZ")
-
