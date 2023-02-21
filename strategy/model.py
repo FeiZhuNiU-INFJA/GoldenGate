@@ -237,7 +237,7 @@ class MyLSTM(nn.Module, ModelExt):
             x = torch.tensor(x).unsqueeze(dim=0).float()
             y_hat, conf = self.inference(x, threshold)
 
-            _data.loc[_data2.iloc[idx + self.seq_length - 1]["trade_date"], head_label] = y_hat
+            _data.loc[_data2.iloc[idx + self.seq_length - 1]["trade_date"], head_label] = y_hat * conf
 
         return _data
 
@@ -262,6 +262,7 @@ class MyLSTM(nn.Module, ModelExt):
                 out_data = F.softmax(out_data, dim=1)
             max_idx = torch.argmax(out_data).item()  # 0, 1, 2
             conf = out_data[0][max_idx].item()
+            # TODO fix below
             if threshold is None:
                 return {1: 1, 2: -1, 0: 0}.get(max_idx), conf
             if max_idx == 1 and conf >= threshold:

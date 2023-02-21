@@ -32,7 +32,24 @@ model1 = MyLSTM(
     use_bceloss=False,
     device=device,
     seq_length=SEQ_LENGTH,
-    weight="mylstm_epoch_12.pt",
+    weight="mylstm_64.pt",
     # weight="mylstm_last.pt",
 ).to(device)
 model1.eval()
+
+
+model2 = MyLSTM(
+    input_size=len(FEATURES_HEAD),
+    hidden_size=HIDDEN_SIZE,
+    num_layers=NUM_LAYERS,
+    dropout_prob=DROPOUT,
+    directions=DIRECTIONS,
+    is_classification=IS_CLASSIFICATION,
+    n_classes=anno1.n_class(),
+    use_bceloss=False,
+    device=device,
+    seq_length=128,
+    weight="mylstm_128.pt",
+    # weight="mylstm_last.pt",
+).to(device)
+model2.eval()
