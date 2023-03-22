@@ -1,5 +1,5 @@
 from data.base import *
-from data.config import *
+from config import *
 
 
 def get_stock_df(f_stock, date_str: str = None, strict=True, interval: int = None):
@@ -7,7 +7,6 @@ def get_stock_df(f_stock, date_str: str = None, strict=True, interval: int = Non
     @date_str: 该时间点之前的数据 “2000-01-01”, 
     @strict: 这一天的数据是否必须存在, 不存在且strict=True的话, 不返回任何内容
     @interval: date_str之前多少个数据  (包括date_str)
-    @annotation: 用于拿标签数据
     """
     df = pd.read_csv(f_stock)
     df.set_index("trade_date", inplace=True)

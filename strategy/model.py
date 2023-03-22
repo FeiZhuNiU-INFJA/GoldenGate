@@ -224,7 +224,7 @@ class MyLSTM(nn.Module, ModelExt):
         self.eval()
         _data = data.copy()
         _data2 = _data.reset_index()
-        _data.iloc[0:self.seq_length][head_label] = 0
+        _data[head_label] = 0
         for idx in tqdm(range(len(_data) - self.seq_length)):
 
             x = _data[idx:idx + self.seq_length][head_features].values

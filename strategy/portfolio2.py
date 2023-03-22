@@ -6,7 +6,7 @@ from functools import partial
 from data.base import Market
 from data.annotation import Annotation
 import config
-from data.config import DIR_DATA_HIST_CN
+from config import DIR_DATA_HIST_CN
 from data.utils import get_stock_df, get_df_symbols
 from strategy.model import MyLSTM
 import torch
@@ -22,13 +22,19 @@ class ModelAnnotation(Annotation):
         return "MyLSTM"
 
     def _labeling(self, data: pd.DataFrame, **kwargs) -> pd.Series:
-        model = config.model1
-        head = "pred"
+        model1 = config.model1
+        model2 = config.model2
+        head1 = "pred1"
+        head2 = "pred2"
         data.set_index("trade_date", inplace=True)
         data.index = pd.to_datetime(data.index, format='%Y%m%d')
-        _data = model.test_model(data[-200:], threshold=None, head_label=head, head_features=config.BASE_FEATURES)
+        data = model1.test_model(data, threshold=None, head_label=head1, head_features=config.BASE_FEATURES)
+        data = model2.test_model(data, threshold=None, head_label=head2, head_features=config.BASE_FEATURES)
+        data['result'] = (data[head1] + data[head2]) / 2.
+        print(data.head())
+        data.to_csv("test.csv")
 
-        return _data[head]
+        return data['result']
 
     def visualize(self, data_with_label: pd.DataFrame, **kwargs):
         pass
@@ -72,7 +78,6 @@ def get_top_n_to_buy_sell(date_str, topN=20):
     ensemble_scores = {}
 
     for model in [config.model1, config.model2]:
-        # model = config.model2
         model.eval()
         scores = heat(date_str=date_str, interval=model.seq_length, model=model, market=None)
         for ts_code, score in scores:
@@ -92,7 +97,8 @@ def get_top_n_to_buy_sell(date_str, topN=20):
 
 if __name__ == '__main__':
     # 找到买入和卖出信号最强的20只股票
-    get_top_n_to_buy_sell("2023-02-21")
+    get_top_n_to_buy_sell("2023-03-22")
+    #
     # df = pd.read_csv("/Users/yulin/workspace/extreme_quant/600000.SH.csv")
     # anno = ModelAnnotation()
     # df = anno.generate_data_with_label(df)

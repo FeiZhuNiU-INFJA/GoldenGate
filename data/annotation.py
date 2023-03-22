@@ -1,4 +1,3 @@
-import traceback
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 from typing import Optional
@@ -7,8 +6,8 @@ import pandas as pd
 from pathlib import Path
 import sys
 import plotly.graph_objects as go
-from p_tqdm import p_umap
-import glob
+
+
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]
 
@@ -42,6 +41,7 @@ class Annotation(metaclass=ABCMeta):
     """
     用于打标签的基类
     """
+
     @property
     @abstractmethod
     def head_label(self):
@@ -208,7 +208,8 @@ class BuySellPointAnnotation(Annotation, Classiable):
             data=go.Scatter(x=hist.index, y=hist['close'], mode='lines', name=f'Price_{kwargs.get("symbol", "")}'))
         # 把target不为零的点画出来
         hist2 = hist[hist[self.head_label] != 0]
-        fig.add_scatter(x=hist2.index, y=hist2['close'], mode='markers', marker_color=hist2[self.head_label], name="Label")
+        fig.add_scatter(x=hist2.index, y=hist2['close'], mode='markers', marker_color=hist2[self.head_label],
+                        name="Label")
         fig.show()
 
     @classmethod
@@ -242,20 +243,3 @@ class BuySellPointAnnotation(Annotation, Classiable):
 #     def visualize(cls, data_with_label: pd.DataFrame, **kwargs):
 #         pass
 
-def worker_anno_buysellpoint(f_csv):
-    try:
-        df = pd.read_csv(f_csv)
-        anno = BuySellPointAnnotation(quote_change=0.2, soft_percent=0.02, soft_eta=0.9, min_gap=5)
-        df = anno.generate_data_with_label(df)
-        if df is not None:
-            df.to_csv(f_csv, index=False)
-    except:
-        print(f_csv, traceback.format_exc())
-
-
-if __name__ == '__main__':
-    from data.config import DIR_DATA_HIST_CN
-    CN_stocks = list(glob.glob(f"{DIR_DATA_HIST_CN}/*.csv"))
-
-    p_umap(worker_anno_buysellpoint, CN_stocks, desc="Label Buy Sell Point", num_cpus=8)
-    # anno.generate_labeled_data(df, f_target="600000.SH.csv")
