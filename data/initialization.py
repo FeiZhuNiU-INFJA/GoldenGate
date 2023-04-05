@@ -76,7 +76,7 @@ def init_stock_CN():
         print(f"left: {len(targets)}")
         results = p_map(partial(_download_hist_data, overwrite=True),
                         targets,
-                        num_cpus=8,
+                        num_cpus=16,
                         desc="get history data")
         print(results)
         targets = np.array(targets)[np.array(results) != 1].tolist()
@@ -94,12 +94,12 @@ def worker_anno_buysellpoint(f_csv):
 
 
 if __name__ == '__main__':
-    # init_stock_CN()
+    init_stock_CN()
     # # 补充
     # _download_hist_data("000576.SZ")
     # _download_hist_data("000581.SZ")
     # _download_hist_data("000607.SZ")
 
     CN_stocks = list(glob.glob(f"{DIR_DATA_HIST_CN}/*.csv"))
-    p_umap(worker_anno_buysellpoint, CN_stocks, desc="Label Buy Sell Point1", num_cpus=8)
+    p_umap(worker_anno_buysellpoint, CN_stocks, desc="Label Buy Sell Point1", num_cpus=16)
 

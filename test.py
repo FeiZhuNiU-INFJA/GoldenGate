@@ -3,47 +3,49 @@ import numpy as np
 import torch
 import pandas as pd
 
+import config
 from config import anno1
 from strategy.model import MyLSTM
-from config import BASE_FEATURES
-from data.config import DIR_DATA_HIST_CN
-SEQ_LENGTH = 64
-HIDDEN_SIZE = 16
-NUM_LAYERS = 2
-DROPOUT = 0.1
-DIRECTIONS = 2
-IS_CLASSIFICATION = True
-device = torch.device("cpu")
+from config import BASE_FEATURES, DIR_DATA_HIST_CN
+# SEQ_LENGTH = 64
+# HIDDEN_SIZE = 16
+# NUM_LAYERS = 2
+# DROPOUT = 0.1
+# DIRECTIONS = 2
+# IS_CLASSIFICATION = True
+# device = torch.device("cpu")
 
 
 if __name__ == '__main__':
     # f_stock = "600000.SH.csv"
-    f_stock = f"{DIR_DATA_HIST_CN}/002679.SZ.csv"
+    # f_stock = f"{DIR_DATA_HIST_CN}/002785.SZ.csv"
+    # f_stock = f"{DIR_DATA_HIST_CN}/300573.SZ.csv"
+    f_stock = f"{DIR_DATA_HIST_CN}/603083.SH.csv"
     df = pd.read_csv(f_stock)
     df.set_index("trade_date", inplace=True)
     df.index = pd.to_datetime(df.index, format='%Y%m%d')
-    df = df["20220101":]
+    df = df["20220601":]
     df = df[BASE_FEATURES + [anno1.head_label]]  # trade_date 用于可视化
 
-    model = MyLSTM(
-        input_size=len(BASE_FEATURES),
-        hidden_size=HIDDEN_SIZE,
-        num_layers=NUM_LAYERS,
-        dropout_prob=DROPOUT,
-        directions=DIRECTIONS,
-        is_classification=IS_CLASSIFICATION,
-        n_classes=anno1.n_class(),
-        use_bceloss=False,
-        device=device,
-        seq_length=SEQ_LENGTH,
-        weight="myLSTM_last.pt",
-    ).to(device)
-
+    # model = MyLSTM(
+    #     input_size=len(BASE_FEATURES),
+    #     hidden_size=HIDDEN_SIZE,
+    #     num_layers=NUM_LAYERS,
+    #     dropout_prob=DROPOUT,
+    #     directions=DIRECTIONS,
+    #     is_classification=IS_CLASSIFICATION,
+    #     n_classes=anno1.n_class(),
+    #     use_bceloss=False,
+    #     device=device,
+    #     seq_length=SEQ_LENGTH,
+    #     weight="myLSTM_last.pt",
+    # ).to(device)
+    model = config.model1
     result = model.test_model(
         data=df,
-        threshold=0.75,
+        threshold=None,
         head_label=anno1.head_label,
         head_features=BASE_FEATURES
     )
-
+    result.to_csv("test.csv")
     anno1.visualize(result)
