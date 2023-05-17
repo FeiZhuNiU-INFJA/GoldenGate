@@ -51,11 +51,16 @@ def get_trade_cal(exchange: Optional[Exchange] = None):
 
 
 def get_symbol_hist(ts_code, start_date=None, end_date=None, interval=Interval.DAILY):
-    """
-    https://tushare.pro/document/2?doc_id=27
-    """
     # TODO 每次最多20年的数据
-    df = PRO.query(interval, ts_code=ts_code, start_date=start_date, end_date=end_date)
+    if interval == Interval.DAILY:
+        # https://tushare.pro/document/2?doc_id=109
+        df = ts.pro_bar(
+            ts_code=ts_code, start_date=start_date, end_date=end_date,
+            adj='qfq', asset='E', factors=['tor', 'vr'], adjfactor=True
+        )
+    else:
+        # https://tushare.pro/document/2?doc_id=27
+        df = PRO.query(interval, ts_code=ts_code, start_date=start_date, end_date=end_date)
     return df
 
 

@@ -35,6 +35,9 @@ class SingleSymbolDataset(Dataset):
         self.with_aug = with_aug
 
         self.hist = pd.read_csv(f_hist)
+        if not all(x in list(self.hist.columns) for x in self.features_head):
+            self.hist = self.hist[0:0]
+            return
         # 根据start_date, end_date过滤出数据
         self.hist.set_index("trade_date", inplace=True)
         self.hist.sort_index(inplace=True)
@@ -52,7 +55,7 @@ class SingleSymbolDataset(Dataset):
         x[:, 0:4] /= x[0][0]
         x[:, 4] /= x[0][4]
         x[:, 5] /= x[0][5]
-        x[:, :] -= 1
+        x[:, 0:6] -= 1
         y = self.hist.iloc[idx + self.seq_len - 1][self.label_head]
 
         if self.is_classification:

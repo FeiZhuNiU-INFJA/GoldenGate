@@ -99,7 +99,8 @@ if __name__ == '__main__':
     # _download_hist_data("000576.SZ")
     # _download_hist_data("000581.SZ")
     # _download_hist_data("000607.SZ")
+    # _download_hist_data("601360.SH")
 
     CN_stocks = list(glob.glob(f"{DIR_DATA_HIST_CN}/*.csv"))
-    p_umap(worker_anno_buysellpoint, CN_stocks, desc="Label Buy Sell Point1", num_cpus=16)
+    p_umap(worker_anno_buysellpoint, CN_stocks, desc="Label Buy Sell Point", num_cpus=10)
 

@@ -231,7 +231,7 @@ class MyLSTM(nn.Module, ModelExt):
             x[:, 0:4] /= x[0][0]
             x[:, 4] /= x[0][4]
             x[:, 5] /= x[0][5]
-            x[:, :] -= 1
+            x[:, 0:6] -= 1
             # y = _data.iloc[idx + seq_length - 1][head_label]
 
             x = torch.tensor(x).unsqueeze(dim=0).float()
