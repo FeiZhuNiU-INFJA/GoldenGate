@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1]))
 from data.tushare_api import *
 from config import *
+from hubs import anno1, anno2
 from data.base import *
 from functools import partial
 from p_tqdm import p_map
@@ -94,13 +95,12 @@ def worker_anno_buysellpoint(f_csv):
 
 
 if __name__ == '__main__':
-    init_stock_CN()
-    # # 补充
+    # 下载日线数据
+    # init_stock_CN()
+    # 万一有数据遗漏可以补充
     # _download_hist_data("000576.SZ")
-    # _download_hist_data("000581.SZ")
-    # _download_hist_data("000607.SZ")
-    # _download_hist_data("601360.SH")
 
+    # 打标签
     CN_stocks = list(glob.glob(f"{DIR_DATA_HIST_CN}/*.csv"))
     p_umap(worker_anno_buysellpoint, CN_stocks, desc="Label Buy Sell Point", num_cpus=10)
 

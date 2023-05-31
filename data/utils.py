@@ -2,11 +2,17 @@ from data.base import *
 from config import *
 
 
-def get_stock_df(f_stock, date_str: str = None, strict=True, interval: int = None):
-    """
-    @date_str: 该时间点之前的数据 “2000-01-01”, 
-    @strict: 这一天的数据是否必须存在, 不存在且strict=True的话, 不返回任何内容
-    @interval: date_str之前多少个数据  (包括date_str)
+def get_stock_df(f_stock, date_str: str = None, strict=True, interval: int = None)-> pd.DataFrame:
+    """获取指定时间片段的日线数据
+
+    Args:
+        f_stock (_type_): 文件
+        date_str (str, optional): 该时间点之前的数据 “2000-01-01”. Defaults to None.
+        strict (bool, optional): 这一天的数据是否必须存在, 不存在且strict=True的话, 不返回任何内容. Defaults to True.
+        interval (int, optional): date_str之前多少个数据. Defaults to None.
+
+    Returns:
+        pd.DataFrame: 
     """
     df = pd.read_csv(f_stock)
     df.set_index("trade_date", inplace=True)
@@ -24,7 +30,15 @@ def get_stock_df(f_stock, date_str: str = None, strict=True, interval: int = Non
     return df
 
 
-def get_df_symbols(market: Market = None):
+def get_df_symbols(market: Market = None) -> pd.DataFrame:
+    """获取指定市场的所有股票列表
+
+    Args:
+        market (Market, optional): 市场类型. Defaults to None.
+
+    Returns:
+        pd.DataFrame: _description_
+    """
     df = pd.read_csv(FILE_SYMBOLS_CN)
     if market is not None:
         df = df[df["market"] == market]

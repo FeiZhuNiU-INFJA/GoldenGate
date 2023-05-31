@@ -2,7 +2,7 @@ from enum import Enum
 
 import pandas as pd
 from pandas import DataFrame
-from common.logger import LOGGER
+from config import LOGGER
 
 
 class Interval(str, Enum):

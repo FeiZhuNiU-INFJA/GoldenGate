@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 import torch.nn as nn
@@ -7,9 +7,9 @@ import torch
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import confusion_matrix, classification_report, recall_score, precision_score
+import config
 
-
-class ModelExt(metaclass=ABCMeta):
+class ModelExt(ABC):
 
     @abstractmethod
     def save_model(self, **kwargs):
@@ -32,6 +32,29 @@ class ModelExt(metaclass=ABCMeta):
         pass
 
 
+class MyTransformer(nn.Module, ModelExt):
+    
+    
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+
+    def save_model(self, **kwargs):
+        torch.save()
+
+    def load_model(self, **kwargs):
+        pass
+
+    def train_model(self, **kwargs):
+        pass
+
+    def test_model(self, **kwargs):
+        pass
+
+    def inference(self, **kwargs):
+        pass
+
+
 class MyLSTM(nn.Module, ModelExt):
 
     def __init__(self,
@@ -44,7 +67,7 @@ class MyLSTM(nn.Module, ModelExt):
                  is_classification=False,
                  n_classes=3,
                  use_bceloss=False,
-                 device=torch.device('cpu'),
+                 device=config.DEVICE,
                  weight=None):
         super(MyLSTM, self).__init__()
 

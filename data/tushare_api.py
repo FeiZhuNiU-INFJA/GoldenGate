@@ -9,7 +9,7 @@ sys.path.append(str(Path(__file__).parents[1]))
 from data.base import Interval, Exchange
 
 ts.set_token("b9d8623c7dbde160e75147e2b47588810dd8dc3033ec8cadc9f64f53")
-PRO = ts.pro_api()
+PRO = ts.pro_api(timeout=2)
 
 
 def get_symbols(exchange: Optional[Exchange] = None):
@@ -56,7 +56,7 @@ def get_symbol_hist(ts_code, start_date=None, end_date=None, interval=Interval.D
         # https://tushare.pro/document/2?doc_id=109
         df = ts.pro_bar(
             ts_code=ts_code, start_date=start_date, end_date=end_date,
-            adj='qfq', asset='E', factors=['tor', 'vr'], adjfactor=True
+            adj='qfq', asset='E', factors=['tor', 'vr'], adjfactor=True, retry_count=1
         )
     else:
         # https://tushare.pro/document/2?doc_id=27

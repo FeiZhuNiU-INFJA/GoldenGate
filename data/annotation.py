@@ -13,7 +13,7 @@ ROOT = FILE.parents[1]
 
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to
-from common.logger import LOGGER
+from config import LOGGER
 
 
 class Classiable(metaclass=ABCMeta):
@@ -44,15 +44,21 @@ class Annotation(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def head_label(self):
+    def head_label(self) -> str:
+        """ 标签名
         """
-        表头
-        """
-        return "should be reset in subclass"
+        raise NotImplementedError
 
     @abstractmethod
     def _labeling(self, data: pd.DataFrame, **kwargs) -> pd.Series:
-        pass
+        """ 打标签
+        Args:
+            data (pd.DataFrame): 一个股票的日线表格
+
+        Returns:
+            pd.Series: 标签列
+        """
+        raise NotImplementedError
 
     # TODO 参数放到构造函数里面去
     def generate_data_with_label(self, data: pd.DataFrame, **kwargs) -> Optional[pd.DataFrame]:
@@ -69,8 +75,10 @@ class Annotation(metaclass=ABCMeta):
 
     @abstractmethod
     def visualize(self, data_with_label: pd.DataFrame, **kwargs):
-        """
-        把self.data_with_label可视化出来
+        """把data_with_label可视化出来
+
+        Args:
+            data_with_label (pd.DataFrame): 带标签的表格数据
         """
         pass
 
@@ -83,6 +91,7 @@ class BuySellPointAnnotation(Annotation, Classiable):
                  soft_eta=1.,
                  min_gap=1):
         super().__init__()
+        
         """
         quote_change: 涨跌幅百分比
         min_interval: 买卖最小间隔
