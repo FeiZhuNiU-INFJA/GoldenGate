@@ -1,40 +1,29 @@
 from typing import List
 
-import torch
 from torch.utils.data import Dataset
 import pandas as pd
-import torch.nn.functional as F
 import numpy as np
-
+from data.annotation import Annotation
 
 class SingleSymbolDataset(Dataset):
 
     def __init__(self,
                  f_hist: str,
-                 label_head: str,
+                 anno: Annotation,
                  features_head: List[str],
+                 seq_len,
                  start_date,
                  end_date,
-                 seq_len,
-                 is_classification: bool = True,
-                 is_one_hot_label: bool = False,
-                 func_label_to_class=None,  # 用于把label转换成类别的方法
-                 n_classes: int = 3,
                  with_aug=False,
                  ):
         self.f_hist = f_hist
-        self.label_head = label_head  # 标签对应的head
+        self.anno = anno  # 打标签的方法
         self.features_head = features_head  # 特征对应的head
-        # self.start_date = start_date      # 20000101 这样的格式
-        # self.end_date = end_date
         self.seq_len = seq_len
-        self.func_label_to_class = func_label_to_class
-        self.is_classification = is_classification and func_label_to_class is not None
-        self.is_one_hot_label = is_one_hot_label
-        self.n_classes = n_classes
         self.with_aug = with_aug
 
         self.hist = pd.read_csv(f_hist)
+        # features_head有缺失
         if not all(x in list(self.hist.columns) for x in self.features_head):
             self.hist = self.hist[0:0]
             return
@@ -48,20 +37,17 @@ class SingleSymbolDataset(Dataset):
         return max(len(self.hist) - self.seq_len, 0)
 
     def __getitem__(self, idx):
-        x = self.hist[idx:idx + self.seq_len][self.features_head].values
+        x = self.hist[idx:idx + self.seq_len]
+        x = x[self.features_head].values
         if self.with_aug:
             x = x + x * (np.random.random(x.shape) / 500 - 0.001)  # 添加0.1%的噪声
         # 归一化 以第一天的开盘价为基准
-        x[:, 0:4] /= x[0][0]
-        x[:, 4] /= x[0][4]
-        x[:, 5] /= x[0][5]
+        x[:, 0:4] /= x[0][0]  # OHCL
+        x[:, 4] /= x[0][4]    # vol  
+        x[:, 5] /= x[0][5]    # amount  
         x[:, 0:6] -= 1
-        y = self.hist.iloc[idx + self.seq_len - 1][self.label_head]
-
-        if self.is_classification:
-            y = self.func_label_to_class(y)
-            if self.is_one_hot_label:
-                y = F.one_hot(torch.tensor(y), num_classes=self.n_classes)
+        y = self.hist.iloc[idx + self.seq_len - 1][self.anno.head_label]
+        y = self.anno.label_to_class(y)
         return x, y
 
 

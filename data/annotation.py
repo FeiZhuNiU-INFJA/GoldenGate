@@ -16,27 +16,6 @@ if str(ROOT) not in sys.path:
 from config import LOGGER
 
 
-class Classiable(metaclass=ABCMeta):
-    @classmethod
-    @abstractmethod
-    def label_to_class(cls, label):
-        """
-        如果是分类任务，映射到哪一类
-        :param label:
-        :return:
-        """
-        pass
-
-    @classmethod
-    @abstractmethod
-    def n_class(cls):
-        """
-        如果是分类任务，可以分成几类
-        :return:
-        """
-        pass
-
-
 class Annotation(metaclass=ABCMeta):
     """
     用于打标签的基类
@@ -82,8 +61,27 @@ class Annotation(metaclass=ABCMeta):
         """
         pass
 
+    @classmethod
+    @abstractmethod
+    def label_to_class(cls, label):
+        """
+        如果是分类任务，映射到哪一类
+        :param label:
+        :return:
+        """
+        pass
 
-class BuySellPointAnnotation(Annotation, Classiable):
+    @classmethod
+    @abstractmethod
+    def n_class(cls):
+        """
+        如果是分类任务，可以分成几类
+        :return:
+        """
+        pass
+
+
+class BuySellPointAnnotation(Annotation):
 
     def __init__(self,
                  quote_change=0.2,

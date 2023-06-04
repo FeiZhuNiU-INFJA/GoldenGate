@@ -8,6 +8,8 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import confusion_matrix, classification_report, recall_score, precision_score
 import config
+from torch import Tensor
+import math
 
 class ModelExt(ABC):
 
@@ -31,28 +33,62 @@ class ModelExt(ABC):
     def inference(self, **kwargs):
         pass
 
+class PositionalEncoding(nn.Module):
 
-class MyTransformer(nn.Module, ModelExt):
+    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
+        super().__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pe = torch.zeros(1, max_len, d_model)
+        pe[:, :, 0::2] = torch.sin(position * div_term)
+        pe[:, :, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x: Tensor) -> Tensor:
+        """
+        Arguments:
+            x: Tensor, shape ``[batch_size, seq_len, embedding_dim]``
+        """
+        x = x + self.pe[:,:x.size(1),:]
+        return self.dropout(x)
+    
+class MyTransformer(nn.Module):
+    def initialize_weights(self):
+        for m in self.modules():
+            # 判断是否属于Conv2d
+            if isinstance(m, nn.Conv2d):
+                torch.nn.init.xavier_normal_(m.weight.data)
+                # 判断是否有偏置
+                if m.bias is not None:
+                    torch.nn.init.constant_(m.bias.data,0.3)
+            elif isinstance(m, nn.Linear):
+                torch.nn.init.normal_(m.weight.data, 0.1)
+                if m.bias is not None:
+                    torch.nn.init.zeros_(m.bias.data)
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1) 		 
+                m.bias.data.zeros_()
     
     
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, seq_len, input_dim) -> None:
+        super().__init__()
+        embed_dim = 32
+        n_clz = 3
+        self.postion_enc = PositionalEncoding(d_model=embed_dim, max_len=seq_len)
+        self.input_proj = nn.Linear(input_dim, embed_dim)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=embed_dim, nhead=4, dim_feedforward=embed_dim*4, batch_first=True)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=4)
+        self.classifier = nn.Linear(embed_dim, n_clz)
+        self.initialize_weights()
 
-
-    def save_model(self, **kwargs):
-        torch.save()
-
-    def load_model(self, **kwargs):
-        pass
-
-    def train_model(self, **kwargs):
-        pass
-
-    def test_model(self, **kwargs):
-        pass
-
-    def inference(self, **kwargs):
-        pass
+    def forward(self, x):
+        out = self.input_proj(x)
+        out = self.postion_enc(out)
+        out = self.transformer_encoder(out)
+        out = self.classifier(out[:,0, :])
+        return out
 
 
 class MyLSTM(nn.Module, ModelExt):

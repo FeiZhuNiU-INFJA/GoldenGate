@@ -34,32 +34,7 @@ FILE_INDEX_CN = STOCK_CN_HOME / "index.csv"
 
 DIR_DATA_HIST_CN.mkdir(exist_ok=True, parents=True)
 
-BASE_FEATURES = ["open", "high", "low", "close", 'vol', 'amount']
+BASE_FEATURES = ["open", "high", "low", "close", 'vol', 'amount', 'turnover_rate', 'volume_ratio']
 
-
-# 1st model
-# SEQ_LENGTH = 64
-# FEATURES_HEAD = BASE_FEATURES
-# FEATURES_HEAD2 = BASE_FEATURES + ["turnover_rate", "volume_ratio"]
-# HIDDEN_SIZE = 16
-# NUM_LAYERS = 2
-# DROPOUT = 0.1
-# DIRECTIONS = 2
-# IS_CLASSIFICATION = True
 DEVICE = torch.device("cpu")
 
-
-# model3 = MyLSTM(
-#     input_size=8,
-#     hidden_size=16,
-#     num_layers=2,
-#     dropout_prob=0.1,
-#     directions=2,
-#     is_classification=True,
-#     n_classes=3,
-#     use_bceloss=False,
-#     device=device,
-#     seq_length=128,
-#     weight="mylstm_128_HEAD2.pt",
-# ).to(device)
-# model3.eval()

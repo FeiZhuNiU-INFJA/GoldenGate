@@ -8,7 +8,8 @@ import glob
 from torch.optim.lr_scheduler import StepLR
 from strategy.model import MyLSTM
 from data.dataset import SingleSymbolDataset
-from config import anno1, anno2, BASE_FEATURES, DIR_DATA_HIST_CN, FEATURES_HEAD2
+from config import BASE_FEATURES, DIR_DATA_HIST_CN
+from hubs import anno1, anno2
 
 if __name__ == '__main__':
     device = torch.device("cpu")
@@ -30,7 +31,7 @@ if __name__ == '__main__':
     VAL_END_DATE = "20230101"
 
     anno = anno1
-    feature_head = FEATURES_HEAD2
+    feature_head = BASE_FEATURES
     LABEL_HEAD = anno.head_label
 
     train_dl_params = {'batch_size': BATCH_SIZE,
@@ -46,7 +47,7 @@ if __name__ == '__main__':
     training_datasets = []
     validation_datasets = []
 
-    for f_hist_csv in tqdm.tqdm(list(glob.glob(f"{DIR_DATA_HIST_CN}/*.csv")),
+    for f_hist_csv in tqdm.tqdm(list(glob.glob(f"{DIR_DATA_HIST_CN}/*.csv"))[:10],
                                 desc="loading hist data"):
         training_datasets.append(
             SingleSymbolDataset(
