@@ -61,6 +61,7 @@ def get_symbol_hist(ts_code, start_date=None, end_date=None, interval=Interval.D
     else:
         # https://tushare.pro/document/2?doc_id=27
         df = PRO.query(interval, ts_code=ts_code, start_date=start_date, end_date=end_date)
+    df.fillna(-1, inplace = True)
     return df
 
 

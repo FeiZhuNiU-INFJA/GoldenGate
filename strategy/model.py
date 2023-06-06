@@ -79,15 +79,15 @@ class MyTransformer(nn.Module):
         self.postion_enc = PositionalEncoding(d_model=embed_dim, max_len=seq_len)
         self.input_proj = nn.Linear(input_dim, embed_dim)
         encoder_layer = nn.TransformerEncoderLayer(d_model=embed_dim, nhead=4, dim_feedforward=embed_dim*4, batch_first=True)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=4)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
         self.classifier = nn.Linear(embed_dim, n_clz)
         self.initialize_weights()
 
     def forward(self, x):
-        out = self.input_proj(x)
-        out = self.postion_enc(out)
-        out = self.transformer_encoder(out)
-        out = self.classifier(out[:,0, :])
+        x = self.input_proj(x)
+        x = self.postion_enc(x)
+        x = self.transformer_encoder(x)
+        out = self.classifier(x[:,0, :])
         return out
 
 

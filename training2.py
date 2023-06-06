@@ -14,9 +14,9 @@ from hubs import anno1, anno2
 import numpy as np
 
 if __name__ == '__main__':
-    device = torch.device("cpu")
+    device = torch.device("cuda:0")
     SEQ_LENGTH = 64
-    BATCH_SIZE = 32
+    BATCH_SIZE = 640
     LEARNING_RATE = 1e-3
     RESUME = False
     EPOCHS = 30
@@ -33,12 +33,12 @@ if __name__ == '__main__':
     train_dl_params = {'batch_size': BATCH_SIZE,
                        'shuffle': True,  # TODO
                        'drop_last': True,  # Disregard last incomplete batch
-                       'num_workers': 8}
+                       'num_workers': 16}
 
-    val_dl_params = {'batch_size': 1,
+    val_dl_params = {'batch_size': 64,
                      'shuffle': False,
                      'drop_last': False,
-                     'num_workers': 8}
+                     'num_workers': 16}
 
     training_datasets = []
     validation_datasets = []
@@ -103,7 +103,7 @@ if __name__ == '__main__':
             loss.backward()
             running_training_loss += loss.item()
 
-            # torch.nn.utils.clip_grad_norm_(self.parameters(), 20)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), 10)
             optimizer.step()
         scheduler.step()
 
@@ -129,11 +129,9 @@ if __name__ == '__main__':
 
                 output_softmax = torch.nn.Softmax(dim=1)(output)
 
-                max_idx = torch.argmax(output).item()
-                # TODO batch_size != 1
-                y_predicts.append(max_idx)
-                y_confidences.append(output_softmax[0][max_idx].item())
-                y_trues.append(y_batch.item())
+                y_predicts.extend(torch.argmax(output, dim=1).tolist())
+                y_confidences.extend(torch.max(output_softmax, dim=1)[0].tolist())
+                y_trues.extend(y_batch.tolist())
                 # print(f"validation: {F.softmax(output, dim=1) if not USE_BCELOSS else output, y_batch}")
                 running_validation_loss += validation_loss.item()
 

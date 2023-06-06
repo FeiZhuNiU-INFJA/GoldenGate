@@ -96,7 +96,7 @@ def worker_anno_buysellpoint(f_csv):
 
 if __name__ == '__main__':
     # 下载日线数据
-    # init_stock_CN()
+    init_stock_CN()
     # 万一有数据遗漏可以补充
     # _download_hist_data("000576.SZ")
 
