@@ -1,11 +1,28 @@
 import glob
 from pathlib import Path
 import torch
+from datetime import timedelta
+from accelerate import Accelerator
+from accelerate.logging import get_logger
+from accelerate import InitProcessGroupKwargs, DistributedDataParallelKwargs
 import logging
 
+init_kwargs = InitProcessGroupKwargs(timeout=timedelta(seconds=7200))
+# ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
+ACCELERATOR = Accelerator(kwargs_handlers=[init_kwargs])
+DEVICE = ACCELERATOR.device
+# 配置Logger
+LOGGER = get_logger("my log")
+LOGGER.setLevel("INFO")
+formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+chlr = logging.FileHandler("log.txt")
+chlr.setFormatter(formatter)
+LOGGER.logger.addHandler(chlr)
+LOGGER.info("init logger.", main_process_only=True)
 
-logging.basicConfig(filename='extreme.log', level=logging.INFO, format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
-LOGGER = logging.getLogger("extreme_quant")
+
+# logging.basicConfig(filename='extreme.log', level=logging.INFO, format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
+# LOGGER = logging.getLogger("extreme_quant")
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]
@@ -36,5 +53,4 @@ DIR_DATA_HIST_CN.mkdir(exist_ok=True, parents=True)
 
 BASE_FEATURES = ["open", "high", "low", "close", 'vol', 'amount', 'turnover_rate', 'volume_ratio']
 
-DEVICE = torch.device("cpu")
 

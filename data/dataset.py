@@ -45,7 +45,7 @@ class SingleSymbolDataset(Dataset):
         x[:, 0:4] /= x[0][0]  # OHCL
         x[:, 4] /= x[0][4]    # vol  
         x[:, 5] /= x[0][5]    # amount  
-        x[:, 0:6] -= 1
+        # x[:, 0:6] -= 1
         y = self.hist.iloc[idx + self.seq_len - 1][self.anno.head_label]
         y = self.anno.label_to_class(y)
         return x, y
