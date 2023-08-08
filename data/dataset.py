@@ -35,6 +35,13 @@ class SingleSymbolDataset(Dataset):
 
     def __len__(self):
         return max(len(self.hist) - self.seq_len, 0)
+    
+    @classmethod
+    def preprocess(cls, x):
+        x[:, 0:4] /= x[0][0]  # OHCL
+        x[:, 4] /= x[0][4]    # vol  
+        x[:, 5] /= x[0][5]    # amount  
+        return x
 
     def __getitem__(self, idx):
         x = self.hist[idx:idx + self.seq_len]
@@ -42,9 +49,7 @@ class SingleSymbolDataset(Dataset):
         if self.with_aug:
             x = x + x * (np.random.random(x.shape) / 500 - 0.001)  # 添加0.1%的噪声
         # 归一化 以第一天的开盘价为基准
-        x[:, 0:4] /= x[0][0]  # OHCL
-        x[:, 4] /= x[0][4]    # vol  
-        x[:, 5] /= x[0][5]    # amount  
+        x = self.preprocess(x)
         # x[:, 0:6] -= 1
         y = self.hist.iloc[idx + self.seq_len - 1][self.anno.head_label]
         y = self.anno.label_to_class(y)

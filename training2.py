@@ -10,16 +10,15 @@ from torch.optim.lr_scheduler import StepLR
 from strategy.model import MyTransformer
 from data.dataset import SingleSymbolDataset
 from config import BASE_FEATURES, DIR_DATA_HIST_CN, ACCELERATOR, LOGGER, DEVICE
-from hubs import anno1, anno2
+from hubs import anno1, anno2, anno3
 import numpy as np
 
 
 if __name__ == '__main__':
-    # device = torch.device("cuda:0")
     SEQ_LENGTH = 128
     BATCH_SIZE = 640
     LEARNING_RATE = 1e-3
-    RESUME = False
+    RESUME_MODEL = "/data/home/eric/workspace/extreme_quant/checkpoints/mytransformer_best_17.pt"
     EPOCHS = 100
 
     TRAIN_START_DATE = "20000101"
@@ -45,7 +44,7 @@ if __name__ == '__main__':
         training_datasets.append(
             SingleSymbolDataset(
                 f_hist=f_hist_csv,
-                anno=anno1,
+                anno=anno3,
                 features_head=BASE_FEATURES,
                 start_date=TRAIN_START_DATE,
                 end_date=TRAIN_END_DATE,
@@ -56,7 +55,7 @@ if __name__ == '__main__':
         validation_datasets.append(
             SingleSymbolDataset(
                 f_hist=f_hist_csv,
-                anno=anno1,
+                anno=anno3,
                 features_head=BASE_FEATURES,
                 start_date=TRAIN_START_DATE,
                 end_date=TRAIN_END_DATE,
@@ -71,9 +70,12 @@ if __name__ == '__main__':
 
     model = MyTransformer(input_dim=len(BASE_FEATURES), seq_len=SEQ_LENGTH).to(DEVICE)
 
+    if RESUME_MODEL is not None:
+        model.load_state_dict(torch.load(RESUME_MODEL, map_location=DEVICE))
+
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=0.0001)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.95)
-    criterion = nn.CrossEntropyLoss(weight=torch.tensor([1, 80., 80.]).float()).to(DEVICE)
+    criterion = nn.CrossEntropyLoss(weight=torch.tensor([1, 30., 30.]).float()).to(DEVICE)
     
     training_losses = []
     validation_losses = []
@@ -89,6 +91,7 @@ if __name__ == '__main__':
 
         # Begin training
         for idx, (x_batch, y_batch) in enumerate(tqdm.tqdm(training_dl, desc="training", disable=not ACCELERATOR.is_main_process)):
+            optimizer.zero_grad()
             # Convert to Tensors
             x_batch = x_batch.float().to(DEVICE)
             y_batch = y_batch.long().to(DEVICE)
@@ -96,8 +99,7 @@ if __name__ == '__main__':
             output = model(x_batch)
             # Calculate loss
             loss = criterion(output, y_batch)
-            # LOGGER.info(f"loss: {loss.item()}", main_process_only=True)
-            optimizer.zero_grad()
+            # LOGGER.info(f"loss: {loss.item()}", main_process_only=True)  
             # loss.backward()
             ACCELERATOR.backward(loss)
             running_training_loss += loss.item()

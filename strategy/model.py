@@ -54,7 +54,7 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:,:x.size(1),:]
         return self.dropout(x)
     
-class MyTransformer(nn.Module):
+class MyTransformer(nn.Module, ModelExt):
     def initialize_weights(self):
         for m in self.modules():
             # 判断是否属于Conv2d
@@ -72,10 +72,8 @@ class MyTransformer(nn.Module):
                 m.bias.data.zeros_()
     
     
-    def __init__(self, seq_len, input_dim) -> None:
+    def __init__(self, seq_len, input_dim, embed_dim=32, n_clz=3) -> None:
         super().__init__()
-        embed_dim = 32
-        n_clz = 3
         self.postion_enc = PositionalEncoding(d_model=embed_dim, max_len=seq_len)
         self.input_proj = nn.Linear(input_dim, embed_dim)
         encoder_layer = nn.TransformerEncoderLayer(d_model=embed_dim, nhead=4, dim_feedforward=embed_dim*4, batch_first=True)
@@ -89,6 +87,9 @@ class MyTransformer(nn.Module):
         x = self.transformer_encoder(x)
         out = self.classifier(x[:,0, :])
         return out
+    
+    def inference(self, **kwargs):
+        return super().inference(**kwargs)
 
 
 class MyLSTM(nn.Module, ModelExt):

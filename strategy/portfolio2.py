@@ -1,5 +1,8 @@
 import sys
 from pathlib import Path
+from typing import Union
+
+from data.dataset import SingleSymbolDataset
 
 sys.path.append(str(Path(__file__).parents[1]))
 from functools import partial
@@ -9,7 +12,7 @@ import config
 import hubs
 from config import DIR_DATA_HIST_CN
 from data.utils import get_stock_df, get_df_symbols
-from strategy.model import MyLSTM
+from strategy.model import MyLSTM, MyTransformer
 import torch
 from p_tqdm import p_map
 import traceback
@@ -41,7 +44,7 @@ class ModelAnnotation(Annotation):
         pass
 
 
-def heat(date_str, interval, model: MyLSTM, market: Market=None):
+def heat(date_str, interval, model: Union[MyLSTM, MyTransformer], market: Market=None):
     """
     计算某一天某个市场的
     """
@@ -52,10 +55,7 @@ def heat(date_str, interval, model: MyLSTM, market: Market=None):
                 return 0, 0
             df = df[config.BASE_FEATURES]
             x = df.values
-            x[:, 0:4] /= x[0][0]
-            x[:, 4] /= x[0][4]
-            x[:, 5] /= x[0][5]
-            x[:, :] -= 1
+            x = SingleSymbolDataset.preprocess(x)
             x = torch.tensor(x).unsqueeze(dim=0).float()
             clz, conf = model.inference(input_data=x, threshold=None)  # 1 buy -1 sell
             return clz, conf
@@ -72,13 +72,14 @@ def heat(date_str, interval, model: MyLSTM, market: Market=None):
 
 
 def get_top_n_to_buy_sell(date_str, topN=20):
+    # 获取所有股票代码
     df_symbols = get_df_symbols()
     df_symbols.set_index("ts_code", inplace=True)
+    
     # 读取今天所有股票数据
-
     ensemble_scores = {}
 
-    for model in [hubs.model1, hubs.model2]:
+    for model in [hubs.model3]:
         model.eval()
         scores = heat(date_str=date_str, interval=model.seq_length, model=model, market=None)
         for ts_code, score in scores:

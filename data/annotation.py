@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Optional
 import numpy as np
@@ -16,7 +16,7 @@ if str(ROOT) not in sys.path:
 from config import LOGGER
 
 
-class Annotation(metaclass=ABCMeta):
+class Annotation(ABC):
     """
     用于打标签的基类
     """
@@ -42,10 +42,10 @@ class Annotation(metaclass=ABCMeta):
     # TODO 参数放到构造函数里面去
     def generate_data_with_label(self, data: pd.DataFrame, **kwargs) -> Optional[pd.DataFrame]:
         data = data.copy()
-        LOGGER.info(f"Labeling using {self.__class__.__name__} ")
+        LOGGER.debug(f"标注使用的类: {self.__class__.__name__} ")
         label = self._labeling(data, **kwargs)
         if label is None or len(label) != len(data):
-            LOGGER.error(f"{self.__class__.__name__} Labeling not working correctly")
+            LOGGER.error(f"{self.__class__.__name__} 没有正常工作")
             return None
         else:
             label.name = self.head_label
@@ -91,10 +91,10 @@ class BuySellPointAnnotation(Annotation):
         super().__init__()
         
         """
-        quote_change: 涨跌幅百分比
-        min_interval: 买卖最小间隔
-        soft_percent: 买卖点附近差值在soft_percent以内的也算做买卖点，可以付权重
-        soft_eta: soft对应的衰减率
+        quote_change:   涨跌幅百分比
+        min_gap:        买卖最小间隔
+        soft_percent:   买卖点附近差值在soft_percent以内的也算做买卖点，可以付权重
+        soft_eta:       soft对应的衰减率
         """
         self.quote_change = quote_change
         self.soft_percent = soft_percent

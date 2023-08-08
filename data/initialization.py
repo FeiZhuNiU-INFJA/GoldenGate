@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1]))
 from data.tushare_api import *
 from config import *
-from hubs import anno1, anno2
+from hubs import anno1, anno2, anno3
 from data.base import *
 from functools import partial
 from p_tqdm import p_map
@@ -38,7 +38,7 @@ def _download_hist_data(ts_code, retry=3, overwrite=True):
 
 
 def extra_works(df_symbol: DataFrame):
-    LOGGER.info("save industry info")
+    LOGGER.info("保存产业、板块信息 (industry)")
     industries = df_symbol.industry.value_counts().index.to_list()
     f_industry = STOCK_CN_HOME / "industry.csv"
     if f_industry.exists():
@@ -51,17 +51,17 @@ def extra_works(df_symbol: DataFrame):
             if industry not in industries_exist:
                 f.write(f"{industry}\n")
 
-    LOGGER.info("save index info")  # 各种指数信息，下载下来之后根据需求再单独下载需要的指数k线
+    LOGGER.info("save index info (指数信息)")  # 各种指数信息，下载下来之后根据需求再单独下载需要的指数k线
     df_indexes = get_index_base()
     df_indexes.to_csv(FILE_INDEX_CN, index=False)
 
 
 def init_stock_CN():
-    LOGGER.info("Get symbols")
+    LOGGER.info("Get symbols （股票代码）")
     df_symbol = get_symbols()
     df_symbol.to_csv(FILE_SYMBOLS_CN, index=False)
 
-    LOGGER.info("Get trading calendar")
+    LOGGER.info("Get trading calendar  （交易日信息）")
     df_trade_cal = get_trade_cal()
     df_trade_cal.to_csv(FILE_TRADE_CALENDAR_CN, index=False)
 
@@ -73,8 +73,18 @@ def init_stock_CN():
     df.to_csv(STOCK_CN_HOME / "上证指数.csv", index=False)
     # 获取2000年以后得日线数据
     targets = df_symbol.ts_code
+    len_targets = len(targets)  # 剩余（待拉取）股票数量
+    same_left_times = 0  # 同样剩余股票数的次数
     while len(targets) > 0:
-        print(f"left: {len(targets)}")
+        print(f"还剩: {len(targets)}, 剩余相同次数：{same_left_times}")
+        if len(targets) == len_targets:
+            same_left_times += 1
+        else:
+            same_left_times = 0
+        len_targets = len(targets)
+        # 如果尝试很多次还没有成功，则放弃
+        if same_left_times == 20:
+            break
         results = p_map(partial(_download_hist_data, overwrite=True),
                         targets,
                         num_cpus=16,
@@ -86,7 +96,7 @@ def worker_anno_buysellpoint(f_csv):
     try:
         df = pd.read_csv(f_csv)
 
-        for anno in [anno1, anno2]:
+        for anno in [anno1, anno2, anno3]:
             df = anno.generate_data_with_label(df)
         if df is not None:
             df.to_csv(f_csv, index=False)

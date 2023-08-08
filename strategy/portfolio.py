@@ -5,7 +5,7 @@ sys.path.append(str(Path(__file__).parents[1]))
 from functools import partial
 from data.base import Exchange, Market
 import config
-from data.config import DIR_DATA_HIST_CN
+from config import DIR_DATA_HIST_CN
 from data.utils import get_stock_df, get_df_symbols
 from strategy.model import MyLSTM
 import torch
