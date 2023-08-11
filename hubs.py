@@ -42,6 +42,6 @@ anno3 = BuySellPointAnnotation(quote_change=0.1, soft_percent=0.01, soft_eta=0.9
 # ).to(DEVICE)
 # model2.eval()
 
-model3 = MyTransformer(seq_len=128, input_dim=8).to(DEVICE)  # 三分类模型， BASE_FEATURES = ["open", "high", "low", "close", 'vol', 'amount', 'turnover_rate', 'volume_ratio']
-model3.load_state_dict(torch.load("/data/home/eric/workspace/extreme_quant/checkpoints/mytransformer_best_17.pt", map_location=DEVICE))
-model3.eval()
+# model3 = MyTransformer(seq_len=128, input_dim=8).to(DEVICE)  # 三分类模型， BASE_FEATURES = ["open", "high", "low", "close", 'vol', 'amount', 'turnover_rate', 'volume_ratio']
+# model3.load_state_dict(torch.load("/data/home/eric/workspace/extreme_quant/checkpoints/mytransformer_best_17.pt", map_location=DEVICE))
+# model3.eval()

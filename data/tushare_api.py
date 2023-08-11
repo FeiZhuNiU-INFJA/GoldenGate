@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1]))
 from data.base import Interval, Exchange
 
-ts.set_token("b9d8623c7dbde160e75147e2b47588810dd8dc3033ec8cadc9f64f53")
+ts.set_token("48c54212788b6a040d89de4ee5810744d936b44c2423302761f3b254")
 PRO = ts.pro_api(timeout=2)
 
 
