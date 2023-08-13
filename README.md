@@ -1,3 +1,8 @@
+## 安装环境
+```
+pip install -r requirements.txt
+```
+
 ## 下载数据
 ```py
 python data/initialization.py 
