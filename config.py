@@ -4,13 +4,13 @@ import torch
 from datetime import timedelta
 from accelerate import Accelerator
 from accelerate.logging import get_logger
-from accelerate import InitProcessGroupKwargs, DistributedDataParallelKwargs
+from accelerate import InitProcessGroupKwargs
 import logging
 
 init_kwargs = InitProcessGroupKwargs(timeout=timedelta(seconds=7200))
-# ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
 ACCELERATOR = Accelerator(kwargs_handlers=[init_kwargs])
 DEVICE = ACCELERATOR.device
+# DEVICE = 'cpu'
 # 配置Logger
 LOGGER = get_logger("my log")
 LOGGER.setLevel("INFO")

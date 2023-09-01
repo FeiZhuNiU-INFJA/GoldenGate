@@ -2,9 +2,8 @@ import sys
 from pathlib import Path
 from typing import Union
 
-from data.dataset import SingleSymbolDataset
-
 sys.path.append(str(Path(__file__).parents[1]))
+from data.dataset import SingleSymbolDataset
 from functools import partial
 from data.base import Market
 from data.annotation import Annotation
@@ -17,6 +16,7 @@ import torch
 from p_tqdm import p_map
 import traceback
 import pandas as pd
+import tqdm
 
 
 class ModelAnnotation(Annotation):
@@ -67,7 +67,8 @@ def heat(date_str, interval, model: Union[MyLSTM, MyTransformer], market: Market
     df_symbols = get_df_symbols(market=market)
     ts_codes = df_symbols.ts_code.tolist()
     f_csvs = [f"{DIR_DATA_HIST_CN}/{ts_code}.csv" for ts_code in ts_codes]
-    results = p_map(partial(worker), f_csvs, num_cpus=8, desc="calculate heat")
+    results = [worker(f_csv) for f_csv in tqdm.tqdm(f_csvs, desc="calculate heat")]
+    # results = p_map(partial(worker), f_csvs, num_cpus=1, desc="calculate heat")
     return [(x[0], x[1][0]*x[1][1]) for x in zip(ts_codes, results)]  # code, clz*conf
 
 
@@ -99,7 +100,7 @@ def get_top_n_to_buy_sell(date_str, topN=20):
 
 if __name__ == '__main__':
     # 找到买入和卖出信号最强的20只股票
-    get_top_n_to_buy_sell("2023-05-31")
+    get_top_n_to_buy_sell("2023-08-31")
     #
     # df = pd.read_csv("/Users/yulin/workspace/extreme_quant/600000.SH.csv")
     # anno = ModelAnnotation()

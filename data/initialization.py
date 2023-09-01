@@ -12,7 +12,7 @@ from p_tqdm import p_map
 import numpy as np
 from p_tqdm import p_umap
 
-# TODO 每次只能取6000条数据  未来可能有问题
+# NOTE 每次只能取6000条数据  未来可能有问题
 start_date = "20000101"
 
 

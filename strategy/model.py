@@ -54,7 +54,7 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:,:x.size(1),:]
         return self.dropout(x)
     
-class MyTransformer(nn.Module, ModelExt):
+class MyTransformer(nn.Module):
     def initialize_weights(self):
         for m in self.modules():
             # 判断是否属于Conv2d
@@ -74,6 +74,7 @@ class MyTransformer(nn.Module, ModelExt):
     
     def __init__(self, seq_len, input_dim, embed_dim=32, n_clz=3) -> None:
         super().__init__()
+        self.seq_length = seq_len
         self.postion_enc = PositionalEncoding(d_model=embed_dim, max_len=seq_len)
         self.input_proj = nn.Linear(input_dim, embed_dim)
         encoder_layer = nn.TransformerEncoderLayer(d_model=embed_dim, nhead=4, dim_feedforward=embed_dim*4, batch_first=True)
@@ -87,9 +88,27 @@ class MyTransformer(nn.Module, ModelExt):
         x = self.transformer_encoder(x)
         out = self.classifier(x[:,0, :])
         return out
-    
-    def inference(self, **kwargs):
-        return super().inference(**kwargs)
+
+    def inference(self, input_data, threshold=None):
+        """
+        (1, seq_len, n_features)
+        """
+        input_data = input_data.to(config.DEVICE)
+        out_data = self(input_data)
+        out_data = F.softmax(out_data, dim=1)
+        max_idx = torch.argmax(out_data).item()  # 0, 1, 2
+        conf = out_data[0][max_idx].item()
+        # TODO fix below
+        if threshold is None:
+            return {1: 1, 2: -1, 0: 0}.get(max_idx), conf
+        if max_idx == 1 and conf >= threshold:
+            out_data = 1
+        elif max_idx == 2 and conf >= threshold:
+            out_data = -1
+        else:
+            out_data = 0
+
+        return out_data, conf
 
 
 class MyLSTM(nn.Module, ModelExt):
@@ -315,7 +334,6 @@ class MyLSTM(nn.Module, ModelExt):
         (1, seq_len, n_features)
         """
         input_data = input_data.to(self.device)
-        # states = self.init_hidden_states(batch_size=1)
         out_data = self(input_data)
         if self.is_classification:
             if not self.use_bceloss:
@@ -360,30 +378,4 @@ if __name__ == '__main__':
     output1 = torch.nn.Softmax(dim=1)(output)
     print(output1)
     print(output1[0][1].item())
-    # pass
-    # device = torch.device("mps")
-    # EPOCHS = 10
-    # DROPOUT = 0.05
-    # DIRECTIONS = 1
-    # NUM_LAYERS = 2
-    # BATCH_SIZE = 32
-    # # OUTPUT_SIZE = 1
-    # SEQ_LENGTH = 256
-    # HIDDEN_SIZE = 32
-    # LEARNING_RATE = 0.0005
-    # IS_CLASSIFICATION = True
-    # N_CLASSES = 3
-    # USE_BCELOSS = False
-    # IS_TRAIN = False
-    # USE_BERT = True
-    # RESUME = True
-    # RESUME_PATH = "./bert_256_last.pt"
-    # TEST_MODEL = "./bert_256_last.pt"
-    # VALIDATE_EVERY = 2
-    # n_symbols = 50
-    # symbols = [][0:n_symbols]
-    # validate_symbol = "AAPL"
-    # start_date = "2005-01-01"
-    # end_date = "2022-09-09"
-    #
-    # MODEL_NAME = f"{'bert' if USE_BERT else 'lstm'}_{SEQ_LENGTH}"
+
