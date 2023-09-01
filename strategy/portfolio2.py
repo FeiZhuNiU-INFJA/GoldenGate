@@ -57,13 +57,13 @@ def heat(date_str, interval, model: Union[MyLSTM, MyTransformer], market: Market
             x = df.values
             x = SingleSymbolDataset.preprocess(x)
             x = torch.tensor(x).unsqueeze(dim=0).float()
-            clz, conf = model.inference(input_data=x, threshold=None)  # 1 buy -1 sell
-            return clz, conf
+            conf, clz = model.inference(input_data=x)  # 1 buy -1 sell
+            return {1: 1, 2: -1, 0: 0}.get(clz[0]), conf[0]
         except:
             print(traceback.format_exc())
             return 0, 0
+    
     # 根据market过滤出股票
-
     df_symbols = get_df_symbols(market=market)
     ts_codes = df_symbols.ts_code.tolist()
     f_csvs = [f"{DIR_DATA_HIST_CN}/{ts_code}.csv" for ts_code in ts_codes]
@@ -88,10 +88,12 @@ def get_top_n_to_buy_sell(date_str, topN=20):
                 ensemble_scores[ts_code] = [score]
             else:
                 ensemble_scores[ts_code].append(score)
-
+    # 所有模型结果取平均值
     ensemble_scores = [[key, sum(ensemble_scores[key]) / len(ensemble_scores[key])] for key in ensemble_scores]
+    # 去掉ST的股票
     ensemble_scores = list(filter(lambda x: "ST" not in df_symbols.loc[x[0]]["name"], ensemble_scores))
-    ensemble_scores = sorted(ensemble_scores, key=lambda x: x[1])   # 从小到大 小是卖 大是买
+    # 从小到大排序 小是卖 大是买
+    ensemble_scores = sorted(ensemble_scores, key=lambda x: x[1])   
 
     print(ensemble_scores[-topN:][::-1])
 

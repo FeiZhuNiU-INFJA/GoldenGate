@@ -88,27 +88,19 @@ class MyTransformer(nn.Module):
         x = self.transformer_encoder(x)
         out = self.classifier(x[:,0, :])
         return out
-
-    def inference(self, input_data, threshold=None):
+    
+    
+    def inference(self, input_data):
         """
-        (1, seq_len, n_features)
+        (n, seq_len, n_features)
         """
         input_data = input_data.to(config.DEVICE)
         out_data = self(input_data)
-        out_data = F.softmax(out_data, dim=1)
-        max_idx = torch.argmax(out_data).item()  # 0, 1, 2
-        conf = out_data[0][max_idx].item()
-        # TODO fix below
-        if threshold is None:
-            return {1: 1, 2: -1, 0: 0}.get(max_idx), conf
-        if max_idx == 1 and conf >= threshold:
-            out_data = 1
-        elif max_idx == 2 and conf >= threshold:
-            out_data = -1
-        else:
-            out_data = 0
+        out_data = F.softmax(out_data, dim=-1)
+        confs, clzs = torch.max(out_data, dim=-1)  # 0, 1, 2
+        
+        return confs.detach().cpu().numpy(), clzs.detach().cpu().numpy()
 
-        return out_data, conf
 
 
 class MyLSTM(nn.Module, ModelExt):
