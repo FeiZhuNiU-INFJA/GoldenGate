@@ -12,6 +12,7 @@ from data.dataset import SingleSymbolDataset
 from config import BASE_FEATURES, DIR_DATA_HIST_CN, ACCELERATOR, LOGGER, DEVICE
 from hubs import anno1, anno2, anno3
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 if __name__ == '__main__':
@@ -22,9 +23,9 @@ if __name__ == '__main__':
     EPOCHS = 100
 
     TRAIN_START_DATE = "20000101"
-    TRAIN_END_DATE = "20221231"
-    VAL_START_DATE = "20220101"
-    VAL_END_DATE = "20230101"
+    TRAIN_END_DATE = "20230630"
+    VAL_START_DATE = "20221001"
+    VAL_END_DATE = "20230901"
 
     train_dl_params = {'batch_size': BATCH_SIZE,
                        'shuffle': True,  # TODO
@@ -57,16 +58,16 @@ if __name__ == '__main__':
                 f_hist=f_hist_csv,
                 anno=anno3,
                 features_head=BASE_FEATURES,
-                start_date=TRAIN_START_DATE,
-                end_date=TRAIN_END_DATE,
+                start_date=VAL_START_DATE,
+                end_date=VAL_END_DATE,
                 seq_len=SEQ_LENGTH,
                 with_aug=False,
             )
         )
-    validation_datasets = validation_datasets[::40]
+    validation_datasets = validation_datasets[::]
     training_dl = DataLoader(ConcatDataset(training_datasets), pin_memory=True, **train_dl_params)
     validation_dl = DataLoader(ConcatDataset(validation_datasets), pin_memory=True, **val_dl_params)
-    (f"training data: {len(training_dl) * BATCH_SIZE}, validation data: {len(validation_dl)}")
+    LOGGER.info(f"training data: {len(training_dl) * BATCH_SIZE}, validation data: {len(validation_dl) * 64}")
 
     model = MyTransformer(input_dim=len(BASE_FEATURES), seq_len=SEQ_LENGTH).to(DEVICE)
 
@@ -118,6 +119,10 @@ if __name__ == '__main__':
         with torch.no_grad():
 
             running_validation_loss = 0.0
+            
+            num_clz = 3
+            input_lists = [[] for _ in range(num_clz)]
+            output_lists = [[] for _ in range(num_clz)]
 
             for idx, (x_batch, y_batch) in enumerate(tqdm.tqdm(validation_dl, desc="validation", disable=not ACCELERATOR.is_main_process)):
                 # Convert to Tensors
@@ -127,23 +132,57 @@ if __name__ == '__main__':
                 # validation_states = [state.detach() for state in validation_states]
                 output = model(x_batch)
                 validation_loss = criterion(output, y_batch)
-
-                output_softmax = torch.nn.Softmax(dim=1)(output)
-
+                output_softmax = torch.nn.Softmax(dim=-1)(output)
                 y_predicts.extend(torch.argmax(output, dim=1).tolist())
                 y_confidences.extend(torch.max(output_softmax, dim=1)[0].tolist())
                 y_trues.extend(y_batch.tolist())
                 running_validation_loss += validation_loss.item()
 
+                for i in range(num_clz):
+                    input_lists[i].extend([int(element) for element in y_batch==i])
+                    output_lists[i].extend(output_softmax[:,i].tolist())
+            n = 100
+            figure, ax = plt.subplots(num_clz, 1, figsize=(4, 4*num_clz))
+            figure.tight_layout(h_pad=5)
+            for clz in range(num_clz):
+                input_list = np.array(input_lists[clz])
+                output_list = np.array(output_lists[clz])
+                threshs = []
+                ps = []
+                rs = []
+                for i in range(n-1):
+                    threshold = 0.01 + i / n
+                    gt_view = input_list[np.where(output_list > threshold)]
+
+                    tp = np.sum(gt_view == 1)
+                    p = tp / (len(gt_view) + 1)
+                    r = tp / (np.sum(input_list == 1) + 1)
+
+                    threshs.append(threshold)
+                    ps.append(p)
+                    rs.append(r)
+                LOGGER.info(f"{len(threshs)},  {len(ps)},   {len(rs)}")
+                ax[clz].plot(threshs, ps, label=f'P')
+                ax[clz].plot(threshs, rs, label=f'R')
+
+                ax[clz].legend()
+                ax[clz].set_title(f'P/R of {clz}')
+                ax[clz].set_xlabel('confidence')
+                ax[clz].set_ylabel('P/R')
+            
+            figure.savefig(f"epoch_{epoch}.png")
+                
+
         cm = confusion_matrix(y_trues, y_predicts)
         LOGGER.info(f"confusion_matrix: {cm}", main_process_only=True)
         LOGGER.info(classification_report(y_trues, y_predicts), main_process_only=True)
 
-        # TODO 不同confidence下的PR
         cur_val_loss = running_validation_loss / len(validation_dl)
         # validation_losses.append(cur_val_loss)
         LOGGER.info(f"valid loss: {cur_val_loss}", main_process_only=True)
         is_best = (cur_val_loss < min_validation_loss)
+
+        # break
 
         if is_best:
             min_validation_loss = cur_val_loss

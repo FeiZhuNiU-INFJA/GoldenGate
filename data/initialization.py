@@ -112,5 +112,5 @@ if __name__ == '__main__':
 
     # 打标签
     CN_stocks = list(glob.glob(f"{DIR_DATA_HIST_CN}/*.csv"))
-    p_umap(worker_anno_buysellpoint, CN_stocks, desc="Label Buy Sell Point", num_cpus=10)
+    p_umap(worker_anno_buysellpoint, CN_stocks, desc="标注买卖点", num_cpus=10)
 
