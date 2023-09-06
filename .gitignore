@@ -6,3 +6,7 @@
 dataset/
 *.json
 *.txt
+*.png
+*.jpg
+*.out
+

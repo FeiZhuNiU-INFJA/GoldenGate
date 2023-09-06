@@ -39,36 +39,48 @@ if __name__ == '__main__':
     # )
     # result.to_csv("test.csv")
     # anno3.visualize(result)
+    import plotly.subplots as sp
     import plotly.graph_objects as go
 
-    # 创建K线图
-    fig = go.Figure(data=[go.Candlestick(x=df.index,
-                    open=df['open'],
-                    high=df['high'],
-                    low=df['low'],
-                    close=df['close'])])
+    # 创建子图，一个用于K线图，一个用于柱状图
+    fig = sp.make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.05)
 
-    # 定义买卖点数据（示例数据）
-    buy_points = [{'Date': '2023-01-10', 'Price': 150, 'Confidence': 0.8},
-                {'Date': '2023-02-15', 'Price': 170, 'Confidence': 0.9}]
+    # 添加K线图到第一个子图
+    fig.add_trace(go.Candlestick(x=df.index,
+                open=df['open'],
+                high=df['high'],
+                low=df['low'],
+                close=df['close']), row=1, col=1)
 
-    sell_points = [{'Date': '2023-01-20', 'Price': 160, 'Confidence': 0.5},
-                {'Date': '2023-03-05', 'Price': 180, 'Confidence': 0.85}]
+    # 添加柱状图到第二个子图
+    buy_sell_data = pd.DataFrame({
+        'Date': ['2023-09-01', '2023-09-03', '2023-09-05'],
+        'Type': ['Buy', 'Sell', 'Buy'],
+        'Confidence': [0.1, 0.2, 0.3]
+    })
 
-    # 添加买卖点的散点图
-    for point in buy_points:
-        color = f'rgba(255, 0, 0, {point["Confidence"]})'  # 红色，透明度与置信度相关
-        fig.add_trace(go.Scatter(x=[point['Date']], y=[point['Price']],
-                                mode='markers',
-                                marker=dict(color=color, size=10),
-                                text=f"Buy (Confidence: {point['Confidence']})"))
+    for index, row in buy_sell_data.iterrows():
+        if row['Type'] == 'Buy':
+            color = 'red'
+        else:
+            color = 'green'
+        
+        # 设置柱子的高度和颜色
+        fig.add_trace(go.Bar(
+            x=[row['Date']],
+            y=[row['Confidence']],
+            marker=dict(color=color),
+            name=row['Type']
+        ), row=2, col=1)
+    # 自定义第二个子图的Y轴范围为0到1
+    fig.update_yaxes(range=[0, 1], row=2, col=1)
+    # 自定义图表布局
+    fig.update_layout(
+        xaxis_rangeslider_visible=False,  # 隐藏下方的时间范围滑块
+        title='股票K线图与买卖点',
+        xaxis_title='日期',
+        yaxis_title='价格',
+        height=600  # 增加图表的高度
+    )
 
-    for point in sell_points:
-        color = f'rgba(0, 128, 0, {point["Confidence"]})'  # 绿色，透明度与置信度相关
-        fig.add_trace(go.Scatter(x=[point['Date']], y=[point['Price']],
-                                mode='markers',
-                                marker=dict(color=color, size=10),
-                                text=f"Sell (Confidence: {point['Confidence']})"))
-
-    # 显示图表
     fig.show()

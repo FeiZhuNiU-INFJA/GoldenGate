@@ -11,6 +11,16 @@ python data/initialization.py
 ```py
 python data/annotation.py 
 ```
-##### dataset  数据保存的地方，永久的标签可以存在这里
+## 训练
+```
+accelerate config
+accelerate launch training.py
+```
+## 输出某一天的买卖信号
+1. 更新hubs.py中的模型路径
+2. 修改portfolio2.py中的日期
+```
+python strategy/portfolio2.py
+```
 
 

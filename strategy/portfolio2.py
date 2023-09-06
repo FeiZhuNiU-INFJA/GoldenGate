@@ -102,7 +102,7 @@ def get_top_n_to_buy_sell(date_str, topN=20):
 
 if __name__ == '__main__':
     # 找到买入和卖出信号最强的20只股票
-    get_top_n_to_buy_sell("2023-08-31")
+    get_top_n_to_buy_sell("2023-09-04")
     #
     # df = pd.read_csv("/Users/yulin/workspace/extreme_quant/600000.SH.csv")
     # anno = ModelAnnotation()
