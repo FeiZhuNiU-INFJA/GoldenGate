@@ -3,14 +3,11 @@
 pip install -r requirements.txt
 ```
 
-## 下载数据
+## 下载数据、生成标签
 ```py
 python data/initialization.py 
 ```
-## 生成标签
-```py
-python data/annotation.py 
-```
+
 ## 训练
 ```
 accelerate config
