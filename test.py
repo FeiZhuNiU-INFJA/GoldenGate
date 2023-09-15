@@ -2,45 +2,40 @@ from typing import Tuple
 import numpy as np
 import torch
 import pandas as pd
+from data.dataset import SingleSymbolDataset
 
 # import config
-from hubs import anno3, model3
-from strategy.model import MyLSTM
+from hubs import anno4, model4, model3
 from config import BASE_FEATURES, DIR_DATA_HIST_CN
-# SEQ_LENGTH = 64
-# HIDDEN_SIZE = 16
-# NUM_LAYERS = 2
-# DROPOUT = 0.1
-# DIRECTIONS = 2
-# IS_CLASSIFICATION = True
-# device = torch.device("cpu")
+from tqdm import tqdm
 
+import plotly.subplots as sp
+import plotly.graph_objects as go
 
 if __name__ == '__main__':
     # f_stock = "600000.SH.csv"
-    f_stock = f"{DIR_DATA_HIST_CN}/002230.SZ.csv"
-    # f_stock = f"{DIR_DATA_HIST_CN}/003028.SZ.csv"
-    # f_stock = f"{DIR_DATA_HIST_CN}/300573.SZ.csv"
-    # f_stock = f"{DIR_DATA_HIST_CN}/600818.SH.csv"
-    # f_stock = f"{DIR_DATA_HIST_CN}/688331.SH.csv"
-    # f_stock = f"{DIR_DATA_HIST_CN}/601360.SH.csv"
+    f_stock = f"{DIR_DATA_HIST_CN}/603160.SH.csv"
     df = pd.read_csv(f_stock)
     df.set_index("trade_date", inplace=True)
     df.index = pd.to_datetime(df.index, format='%Y%m%d')
     df = df["20220601":]
-    # df = df[BASE_FEATURES + [anno3.head_label]]  # trade_date 用于可视化
 
-    # model = model3
-    # result = model.test_model(
-    #     data=df,
-    #     threshold=None,
-    #     head_label=anno3.head_label,
-    #     head_features=BASE_FEATURES
-    # )
-    # result.to_csv("test.csv")
-    # anno3.visualize(result)
-    import plotly.subplots as sp
-    import plotly.graph_objects as go
+    df = df[BASE_FEATURES]
+    _data = df.copy()
+    
+
+    confs = [0] * len(df)
+    types = ["Nan" for _ in range(len(df))] 
+    for idx in tqdm(range(len(_data) - 128)):
+        x = _data[idx:idx + 128].values
+        x = SingleSymbolDataset.preprocess(x)
+        x = torch.tensor(x).unsqueeze(dim=0).float()
+        conf, clz = model4.inference(input_data=x)
+
+        # score = {1: 1, 2: -1, 0: 0}.get(clz[0]), conf[0]
+        
+        types[idx+128] = {1: "Buy", 2: "Sell", 0: "Nan"}.get(clz[0])
+        confs[idx+128] = conf[0]
 
     # 创建子图，一个用于K线图，一个用于柱状图
     fig = sp.make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.05)
@@ -54,16 +49,18 @@ if __name__ == '__main__':
 
     # 添加柱状图到第二个子图
     buy_sell_data = pd.DataFrame({
-        'Date': ['2023-09-01', '2023-09-03', '2023-09-05'],
-        'Type': ['Buy', 'Sell', 'Buy'],
-        'Confidence': [0.1, 0.2, 0.3]
+        'Date': df.index,
+        'Type': types,
+        'Confidence': confs
     })
 
     for index, row in buy_sell_data.iterrows():
         if row['Type'] == 'Buy':
             color = 'red'
-        else:
+        elif row['Type'] == 'Sell':
             color = 'green'
+        else:
+            color = 'yellow'
         
         # 设置柱子的高度和颜色
         fig.add_trace(go.Bar(

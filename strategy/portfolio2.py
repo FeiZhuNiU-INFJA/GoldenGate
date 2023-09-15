@@ -80,7 +80,7 @@ def get_top_n_to_buy_sell(date_str, topN=20):
     # 读取今天所有股票数据
     ensemble_scores = {}
 
-    for model in [hubs.model3]:
+    for model in [hubs.model4]:
         model.eval()
         scores = heat(date_str=date_str, interval=model.seq_length, model=model, market=None)
         for ts_code, score in scores:
@@ -102,7 +102,7 @@ def get_top_n_to_buy_sell(date_str, topN=20):
 
 if __name__ == '__main__':
     # 找到买入和卖出信号最强的20只股票
-    get_top_n_to_buy_sell("2023-09-04")
+    get_top_n_to_buy_sell("2023-09-14")
     #
     # df = pd.read_csv("/Users/yulin/workspace/extreme_quant/600000.SH.csv")
     # anno = ModelAnnotation()

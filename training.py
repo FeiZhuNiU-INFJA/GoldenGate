@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import StepLR
 from strategy.model import MyTransformer
 from data.dataset import SingleSymbolDataset
 from config import BASE_FEATURES, DIR_DATA_HIST_CN, ACCELERATOR, LOGGER, DEVICE
-from hubs import anno1, anno2, anno3
+from hubs import anno4
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -18,14 +18,15 @@ import matplotlib.pyplot as plt
 if __name__ == '__main__':
     SEQ_LENGTH = 128
     BATCH_SIZE = 640
-    LEARNING_RATE = 1e-3
-    RESUME_MODEL = "/data/home/eric/workspace/extreme_quant/checkpoints/mytransformer_best_17.pt"
+    LEARNING_RATE = 5e-3
+    RESUME_MODEL = "/data/home/eric/workspace/extreme_quant/checkpoints/mytransformer_epoch_99.pt"
+    # RESUME_MODEL = None
     EPOCHS = 100
 
     TRAIN_START_DATE = "20000101"
-    TRAIN_END_DATE = "20230630"
-    VAL_START_DATE = "20221001"
-    VAL_END_DATE = "20230901"
+    TRAIN_END_DATE = "20220930"
+    VAL_START_DATE = "20220301"
+    VAL_END_DATE = "20230301"
 
     train_dl_params = {'batch_size': BATCH_SIZE,
                        'shuffle': True,  # TODO
@@ -45,7 +46,7 @@ if __name__ == '__main__':
         training_datasets.append(
             SingleSymbolDataset(
                 f_hist=f_hist_csv,
-                anno=anno3,
+                anno=anno4,
                 features_head=BASE_FEATURES,
                 start_date=TRAIN_START_DATE,
                 end_date=TRAIN_END_DATE,
@@ -56,7 +57,7 @@ if __name__ == '__main__':
         validation_datasets.append(
             SingleSymbolDataset(
                 f_hist=f_hist_csv,
-                anno=anno3,
+                anno=anno4,
                 features_head=BASE_FEATURES,
                 start_date=VAL_START_DATE,
                 end_date=VAL_END_DATE,
@@ -76,7 +77,7 @@ if __name__ == '__main__':
 
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=0.0001)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.95)
-    criterion = nn.CrossEntropyLoss(weight=torch.tensor([1, 30., 30.]).float()).to(DEVICE)
+    criterion = nn.CrossEntropyLoss(weight=torch.tensor([2., 1., 1.]).float(), label_smoothing=0.1).to(DEVICE)
     
     training_losses = []
     validation_losses = []

@@ -206,6 +206,38 @@ class BuySellPointAnnotation(Annotation):
                         status = Status.Bought
                         high = close
                         idx_high = cur_idx
+        
+        # TODO 
+        last_buy = -1
+        # last_buy_price = -1
+        last_sell = -1
+        # last_sell_price = -1
+        for idx, (label, close) in enumerate(zip(labels, closes)):
+            if label == LABEL_BUY:
+                if last_sell != -1:
+                    for i in range(last_sell, idx):
+                        if closes[i] * (1 - self.quote_change) >= close:
+                            labels[i] = LABEL_SELL
+                for i in range(idx):
+                    if (closes[idx-i] - close) / close < 0.02:
+                        labels[idx-i] = LABEL_BUY
+                    else:
+                        break
+                last_buy = idx
+            elif label == LABEL_SELL:
+                if last_buy != -1:
+                    for i in range(last_buy, idx):
+                        if closes[i] * (1+self.quote_change) <= close:
+                            labels[i] = LABEL_BUY
+                for i in range(idx):
+                    if (close - closes[idx-i]) / close < 0.02:
+                        labels[idx-i] = LABEL_SELL
+                    else:
+                        break
+                last_sell = idx
+                
+
+        
         return pd.Series(labels)
 
     def visualize(self, data_with_label: pd.DataFrame, **kwargs):
@@ -250,3 +282,12 @@ class BuySellPointAnnotation(Annotation):
 #     def visualize(cls, data_with_label: pd.DataFrame, **kwargs):
 #         pass
 
+if __name__ == "__main__":
+    # 打标签
+    import glob
+    import config
+    CN_stocks = list(glob.glob(f"{config.DIR_DATA_HIST_CN}/*.csv"))
+    df = pd.read_csv(CN_stocks[0])
+    anno = BuySellPointAnnotation(quote_change=0.2, soft_percent=0., soft_eta=0.9, min_gap=2)
+    df = anno.generate_data_with_label(df)
+    anno.visualize(df)
