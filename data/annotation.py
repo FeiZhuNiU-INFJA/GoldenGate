@@ -1,18 +1,13 @@
+import sys
+
+sys.path.append('.')
+
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Optional
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import plotly.graph_objects as go
-
-
-FILE = Path(__file__).resolve()
-ROOT = FILE.parents[1]
-
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))  # add ROOT to
 from config import LOGGER
 
 
@@ -288,6 +283,6 @@ if __name__ == "__main__":
     import config
     CN_stocks = list(glob.glob(f"{config.DIR_DATA_HIST_CN}/*.csv"))
     df = pd.read_csv(CN_stocks[0])
-    anno = BuySellPointAnnotation(quote_change=0.2, soft_percent=0., soft_eta=0.9, min_gap=2)
+    anno = BuySellPointAnnotation(quote_change=0.5, soft_percent=0.1, soft_eta=0.9, min_gap=2)
     df = anno.generate_data_with_label(df)
     anno.visualize(df)

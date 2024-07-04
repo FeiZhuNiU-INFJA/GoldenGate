@@ -6,3 +6,4 @@ plotly
 p_tqdm
 numpy
 torchvision
+accelerate
