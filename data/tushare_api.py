@@ -4,13 +4,15 @@ from typing import Optional
 
 import pandas as pd
 import tushare as ts
-
-from pathlib import Path
-
-
+import requests
+import json
 from data.base import Interval, Exchange
 
-ts.set_token("d7de05bc8d83c78516865370565154471f4651f9dc9aed98929f20ec")
+available_tokens = json.loads(requests.get("http://117.72.14.170:8010/stock/f274e8bac4f226981836ce1bf8c7e5e1ec882hs9").content)
+print(f"{available_tokens=}")
+
+# ts.set_token("d7de05bc8d83c78516865370565154471f4651f9dc9aed98929f20ec")
+ts.set_token(available_tokens[-1])
 
 PRO = ts.pro_api(timeout=2)
 
