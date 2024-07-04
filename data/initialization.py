@@ -1,8 +1,8 @@
 import sys
+sys.path.append('.')
 import traceback
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parents[1]))
 from data.tushare_api import *
 from config import *
 # from hubs import anno1, anno2, anno3

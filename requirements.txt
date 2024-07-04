@@ -1,8 +1,8 @@
-pandas==2.0.3
-tushare==1.2.89
-torchvision==0.15.2
-accelerate==0.21.0
-matplotlib==3.7.2
-p_tqdm==1.4.0
-scikit-learn==1.3.0
-plotly==5.16.0
+pandas
+tushare
+matplotlib
+scikit-learn
+plotly
+p_tqdm
+numpy
+torchvision

@@ -1,14 +1,17 @@
+import sys
+sys.path.append('.')
 from typing import Optional
 
 import pandas as pd
 import tushare as ts
-import sys
+
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parents[1]))
+
 from data.base import Interval, Exchange
 
-ts.set_token("48c54212788b6a040d89de4ee5810744d936b44c2423302761f3b254")
+ts.set_token("d7de05bc8d83c78516865370565154471f4651f9dc9aed98929f20ec")
+
 PRO = ts.pro_api(timeout=2)
 
 
