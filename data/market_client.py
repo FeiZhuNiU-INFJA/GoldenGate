@@ -96,10 +96,13 @@ def _fetch_cn_bars_sina(raw_symbol: str, symbol: str, start_date: str, end_date:
 
     code = str(raw_symbol).zfill(6)
     prefix = "sh" if symbol.endswith(".SH") or code.startswith(("6", "9")) else "sz"
-    # datalen=5000 covers ~2005→now; filter to requested window below.
+    # Sina returns the latest `datalen` daily bars. Size it to the requested
+    # window (capped at 5000, ~20y) so incremental updates stay small.
+    span_days = max(1, (pd.Timestamp(_to_iso(end_date)) - pd.Timestamp(_to_iso(start_date))).days + 1)
+    datalen = min(5000, max(span_days, 5))
     url = (
         "https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/"
-        f"CN_MarketData.getKLineData?symbol={prefix}{code}&scale=240&ma=no&datalen=5000"
+        f"CN_MarketData.getKLineData?symbol={prefix}{code}&scale=240&ma=no&datalen={datalen}"
     )
     last_exc: Exception | None = None
     payload = ""
