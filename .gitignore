@@ -18,3 +18,4 @@ checkpoints/*.pt
 *.egg-info/
 dist/
 build/
+*.tar.*
