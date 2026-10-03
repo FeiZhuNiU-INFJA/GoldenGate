@@ -96,7 +96,7 @@ def render_log(
         "python scripts/update_us_recommendations.py",
         "```",
         "",
-        "脚本把账本里还没有的新交易日补上，并按本地复权收盘重算下面的涨跌幅。名单在 `docs/live/us-intersection.json`。手改本页的表格会被下一次运行覆盖；想留一句话，写在对应信号的 `note` 字段。",
+        "脚本把账本里还没有的新交易日补上，并按本地复权收盘重算下面的涨跌幅。名单在 `docs/live/us-intersection.json`。同一轮会重写 `docs/live/us-intersection.html`。手改本页或那个 HTML 会被下一次运行覆盖；想留一句话，写在对应信号的 `note` 字段。",
         "",
         "## 口径",
         "",
@@ -115,6 +115,83 @@ def render_log(
         lines.extend(_signal_section(signal, paths.get(signal["date"], pd.DataFrame()), names, entries.get(signal["date"], {})))
     lines.append("")
     return "\n".join(lines)
+
+
+def page_data(
+    signals: list[dict],
+    paths: dict[str, pd.DataFrame],
+    names: dict[str, str],
+    entries: dict[str, dict[str, float]],
+) -> dict:
+    """Serializable book of cumulative returns. Fractions, not percents."""
+    books = []
+    as_of = ""
+    for signal in signals:
+        picks = list(signal.get("picks") or [])
+        path = paths.get(signal["date"], pd.DataFrame())
+        flat = not picks
+        day_entries = entries.get(signal["date"], {})
+        scores = _score_lookup(signal)
+        pick_rows = []
+        for symbol in picks:
+            score5, score10 = scores.get(symbol, (None, None))
+            pick_rows.append(
+                {
+                    "symbol": _code(symbol),
+                    "name": names.get(symbol, ""),
+                    "entry": _num(day_entries.get(symbol)),
+                    "score5": _num(score5),
+                    "score10": _num(score10),
+                }
+            )
+        path_rows = []
+        if not flat and not path.empty:
+            for _, row in path.iterrows():
+                day = pd.Timestamp(row["trade_date"]).strftime("%Y-%m-%d")
+                path_rows.append(
+                    {
+                        "date": day,
+                        "hold": int(row["hold"]),
+                        "port": _num(row["port"]),
+                        "bench": _num(row["bench"]),
+                        "excess": _num(row["excess"]),
+                        "names": {_code(symbol): _num(row[symbol]) for symbol in picks},
+                    }
+                )
+                if day > as_of:
+                    as_of = day
+        horizons = {}
+        for horizon in HORIZONS:
+            state = horizon_state(path, horizon, flat=flat)
+            if isinstance(state, str):
+                horizons[str(horizon)] = {"status": state}
+            else:
+                horizons[str(horizon)] = {
+                    "status": "到期",
+                    "port": _num(state["port"]),
+                    "bench": _num(state["bench"]),
+                    "excess": _num(state["excess"]),
+                }
+        books.append(
+            {
+                "date": signal["date"],
+                "note": (signal.get("note") or "").strip(),
+                "flat": flat,
+                "held": None if flat or path.empty else int(path["hold"].max()),
+                "picks": pick_rows,
+                "horizons": horizons,
+                "path": path_rows,
+            }
+        )
+    if not as_of and signals:
+        as_of = max(item["date"] for item in signals)
+    return {"as_of": as_of, "books": books}
+
+
+def _num(value) -> float | None:
+    if value is None or not np.isfinite(value):
+        return None
+    return round(float(value), 8)
 
 
 def _summary_table(signals: list[dict], paths: dict[str, pd.DataFrame]) -> str:

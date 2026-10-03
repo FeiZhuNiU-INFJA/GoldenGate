@@ -4,6 +4,9 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+import json
+
+from eval.recommendation_html import render_html
 from eval.recommendation_log import horizon_state, render_log, session_path
 
 
@@ -75,3 +78,47 @@ def test_render_marks_an_open_recommendation_as_not_yet_due():
     assert "APP" in text
     assert "AppLovin" in text
     assert "+0.00%" in text
+    assert "us-intersection.html" in text
+
+
+def _page(html: str) -> dict:
+    start = html.index('<script id="data" type="application/json">') + len('<script id="data" type="application/json">')
+    end = html.index("</script>", start)
+    blob = html[start:end]
+    assert "<" not in blob
+    return json.loads(blob)
+
+
+def test_html_page_carries_the_open_path_and_escapes_names():
+    signal = {
+        "date": "2026-10-01",
+        "note": "",
+        "picks": ["APP.US"],
+        "top5": {"5": [{"symbol": "APP.US", "score": 0.09}], "10": [{"symbol": "APP.US", "score": 0.12}]},
+    }
+    flat = {"date": "2026-10-02", "picks": [], "top5": {}}
+    idx = pd.to_datetime(["2026-10-01", "2026-10-02"])
+    path = session_path(
+        {"APP.US": pd.Series([100.0, 90.0], index=idx)},
+        pd.Series([1000.0, 1010.0], index=idx),
+        idx[0],
+        ["APP.US"],
+    )
+    html = render_html(
+        [signal, flat],
+        {"2026-10-01": path, "2026-10-02": pd.DataFrame()},
+        {"APP.US": "A<B&C>"},
+        {"2026-10-01": {"APP.US": 100.0}},
+    )
+    assert html.startswith("<!DOCTYPE html>")
+    page = _page(html)
+    assert page["as_of"] == "2026-10-02"
+    book = page["books"][0]
+    assert book["picks"][0]["name"] == "A<B&C>"
+    assert book["picks"][0]["symbol"] == "APP"
+    assert book["held"] == 1
+    assert book["horizons"]["5"]["status"] == "未到期"
+    assert book["path"][1]["port"] == round(90.0 / 100.0 - 1.0, 8)
+    assert book["path"][1]["excess"] == round((90.0 / 100.0 - 1.0) - (1010.0 / 1000.0 - 1.0), 8)
+    assert page["books"][1]["flat"] is True
+    assert page["books"][1]["horizons"]["5"]["status"] == "—"

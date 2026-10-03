@@ -47,7 +47,7 @@ Confirm the US benchmark and the liquid names stop on the US `--end`, and that t
 python scripts/update_us_recommendations.py
 ```
 
-This scores any US session after the first date in `docs/live/us-intersection.json` and rewrites `docs/live/us-intersection.md`. Rules already in the script, do not redo them by hand:
+This scores any US session after the first date in `docs/live/us-intersection.json` and rewrites `docs/live/us-intersection.md` and `docs/live/us-intersection.html`. The HTML is the performance view; do not rebuild it by hand. Rules already in the script, do not redo them by hand:
 
 - Models are `checkpoints/ranker_us_h5.txt` and `checkpoints/ranker_us_h10.txt`, score sign `+1`, top 5 each, intersection only.
 - A date with fewer than 450 names is left unrecorded. Finish the bars and rerun. Do not edit the JSON to force it in.
@@ -56,4 +56,4 @@ This scores any US session after the first date in `docs/live/us-intersection.js
 
 ## 5. Reply
 
-Lead with the newest signal date, the names (or 空仓), and any new cumulative row: 持有天数, 组合, 大盘, 超额. Then the last close of CN, HK, and US. Say which of 5 / 10 / 20 日 are still 未到期. The signal date is the last completed US session, not today's calendar date while the US cash session is open.
+Lead with the newest signal date, the names (or 空仓), and any new cumulative row: 持有天数, 组合, 大盘, 超额. Then the last close of CN, HK, and US. Say which of 5 / 10 / 20 日 are still 未到期. Point at `docs/live/us-intersection.html`. The signal date is the last completed US session, not today's calendar date while the US cash session is open.

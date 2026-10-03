@@ -81,9 +81,16 @@ def build_panel(markets: list[str], horizons: tuple[int, ...]) -> pd.DataFrame:
     return panel
 
 
-def _fit_ranker(train: pd.DataFrame, val: pd.DataFrame | None, min_child: int, n_estimators: int):
+def _fit_ranker(
+    train: pd.DataFrame,
+    val: pd.DataFrame | None,
+    min_child: int,
+    n_estimators: int,
+    features: tuple[str, ...] | list[str] | None = None,
+):
     import lightgbm as lgb
 
+    cols = list(features or RANK_FEATURES)
     train = train.sort_values(["trade_date", "symbol"])
     model = lgb.LGBMRanker(
         objective="lambdarank",
@@ -105,12 +112,12 @@ def _fit_ranker(train: pd.DataFrame, val: pd.DataFrame | None, min_child: int, n
     if val is not None and not val.empty:
         val = val.sort_values(["trade_date", "symbol"])
         kwargs = {
-            "eval_set": [(val[list(RANK_FEATURES)], val["relevance"])],
+            "eval_set": [(val[cols], val["relevance"])],
             "eval_group": [_groups(val["trade_date"])],
             "callbacks": [lgb.early_stopping(40), lgb.log_evaluation(50)],
         }
     model.fit(
-        train[list(RANK_FEATURES)],
+        train[cols],
         train["relevance"],
         group=_groups(train["trade_date"]),
         **kwargs,
@@ -125,9 +132,15 @@ def _tree_count(model, cap: int) -> int:
     return best
 
 
-def _score(model, df: pd.DataFrame, sign: int) -> pd.DataFrame:
+def _score(
+    model,
+    df: pd.DataFrame,
+    sign: int,
+    features: tuple[str, ...] | list[str] | None = None,
+) -> pd.DataFrame:
+    cols = list(features or RANK_FEATURES)
     out = df.sort_values(["trade_date", "symbol"]).copy()
-    out["score"] = model.predict(out[list(RANK_FEATURES)]) * sign
+    out["score"] = model.predict(out[cols]) * sign
     return out
 
 
@@ -178,6 +191,8 @@ def train_market(
     min_names: int,
     n_top: int,
     intersect_k: int,
+    features: tuple[str, ...] | list[str] | None = None,
+    checkpoint_pattern: str = "ranker_{market}_h{horizon}.txt",
 ) -> dict:
     roles = assign_split(part["trade_date"], tune_start=tune_start, report_start=report_start)
     part = part.reset_index(drop=True)
@@ -186,6 +201,7 @@ def train_market(
     bench = _bench_returns(market, horizons)
     ret_cols = [f"ret_{h}d" for h in horizons]
     returns = report[["trade_date", "symbol", *ret_cols]].copy()
+    cols = list(features or RANK_FEATURES)
     scored: dict[int, pd.DataFrame] = {}
     models_report = {}
     min_child = MIN_CHILD.get(market, 50)
@@ -200,18 +216,18 @@ def train_market(
         if fit.empty or tune.empty:
             raise RuntimeError(f"{market} h{horizon} missing fit or tune rows")
         logger.info("%s h%s fit=%s tune=%s report=%s", market, horizon, len(fit), len(tune), len(report))
-        selector = _fit_ranker(fit, tune, min_child, n_estimators=400)
+        selector = _fit_ranker(fit, tune, min_child, n_estimators=400, features=cols)
         n_trees = _tree_count(selector, cap=400)
-        tune_scored = _score(selector, tune, sign=1)
+        tune_scored = _score(selector, tune, sign=1, features=cols)
         tune_stats = summarize_scores(tune_scored, label_col=label_col, step=horizon)
         sign = -1 if tune_stats["ic"] is not None and tune_stats["ic"] < 0 else 1
         if sign < 0:
             logger.info("%s h%s tune IC negative; freezing score sign at -1", market, horizon)
         logger.info("%s h%s refit trees=%s sign=%s", market, horizon, n_trees, sign)
-        final = _fit_ranker(labeled, None, min_child, n_estimators=n_trees)
-        path = DIR_CHECKPOINTS / f"ranker_{market}_h{horizon}.txt"
+        final = _fit_ranker(labeled, None, min_child, n_estimators=n_trees, features=cols)
+        path = DIR_CHECKPOINTS / checkpoint_pattern.format(market=market, horizon=horizon)
         final.booster_.save_model(str(path))
-        scored[horizon] = _score(final, report, sign=sign)
+        scored[horizon] = _score(final, report, sign=sign, features=cols)
         models_report[str(horizon)] = {
             "checkpoint": str(path),
             "trees": n_trees,

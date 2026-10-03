@@ -20,11 +20,13 @@ sys.path.insert(0, str(ROOT))
 
 from data import store
 from eval.hold_returns import top_k
+from eval.recommendation_html import render_html
 from eval.recommendation_log import render_log, session_path
 from train.rank_features import RANK_FEATURES, _usable_close, rank_frame
 
 LEDGER = ROOT / "docs" / "live" / "us-intersection.json"
 PAGE = ROOT / "docs" / "live" / "us-intersection.md"
+HTML = ROOT / "docs" / "live" / "us-intersection.html"
 MIN_NAMES = 450
 SIGNS = {5: 1, 10: 1}
 MODELS = {5: ROOT / "checkpoints" / "ranker_us_h5.txt", 10: ROOT / "checkpoints" / "ranker_us_h10.txt"}
@@ -37,9 +39,13 @@ def main() -> None:
     paths, entries = _paths(ledger, bench)
     names = _names()
     PAGE.write_text(render_log(ledger["signals"], paths, names, entries))
+    HTML.write_text(render_html(ledger["signals"], paths, names, entries))
     if added:
         LEDGER.write_text(json.dumps(ledger, ensure_ascii=False, indent=2) + "\n")
-    print(f"wrote {PAGE.relative_to(ROOT)} signals={len(ledger['signals'])} added={added}")
+    print(
+        f"wrote {PAGE.relative_to(ROOT)} and {HTML.relative_to(ROOT)} "
+        f"signals={len(ledger['signals'])} added={added}"
+    )
 
 
 def _record_new(ledger: dict, bench: pd.Series) -> int:

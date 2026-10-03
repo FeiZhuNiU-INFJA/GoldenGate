@@ -15,7 +15,7 @@ export default function LabelAndModelSurvey() {
       <Stack gap={6}>
         <H1>先改标签和损失，再改网络</H1>
         <Text tone="secondary">
-          对照 2026-10-02 基线：±1.5% / ±4% 超额收益三分类，个股独立 Transformer，验证集 precision 不随置信度上升。文献范围：MASTER（AAAI 2024）、截面排序损失比较（arXiv 2510.14156）、FactorVAE（AAAI 2022）。
+          对照 2026-10-02 基线：±1.5% / ±4% 超额收益三分类，个股独立 Transformer，precision 不随置信度上升。排序实验不再用 2015–2022 / 2023 / 2024 三段切分。文献范围：MASTER（AAAI 2024）、截面排序损失比较（arXiv 2510.14156）、FactorVAE（AAAI 2022）。
         </Text>
       </Stack>
 
@@ -25,7 +25,7 @@ export default function LabelAndModelSurvey() {
 
       <H2>标签和损失</H2>
       <Text>
-        选股要的是同一天里的相对顺序。标签应按市场、按日做截面处理，评价用每日 RankIC 和多空价差，不用三分类准确率。
+        选股要的是同一天里的相对顺序。标签应按市场、按日做截面处理。评价用验证集上 Top 5 的涨跌幅、同期基准和超额，RankIC 只看名次，不用三分类准确率。
       </Text>
       <Table
         headers={["方案", "标签", "训练目标", "相对当前规则"]}
@@ -92,7 +92,7 @@ export default function LabelAndModelSurvey() {
           [
             "按日分组的树模型",
             "当天截面上的因子向量，LightGBM LambdaRank",
-            "先验证新标签有没有 RankIC。Qlib 的 Alpha158 + LightGBM 是 A 股日频上深度模型要超过的基线",
+            "先在验证集上看 RankIC 和 Top 5 超额。Qlib 的 Alpha158 + LightGBM 是 A 股日频上深度模型要超过的基线",
           ],
           [
             "MASTER",
@@ -107,18 +107,29 @@ export default function LabelAndModelSurvey() {
         ]}
       />
 
+      <H2>切分和评价</H2>
+      <Text>
+        只有训练集和验证集。标签日 t &lt; 2024-06-01 全部进入最终模型。t ≥ 2024-06-01 是验证集，只出表，不参与选树，也不参与决定分数正负号。
+      </Text>
+      <Text>
+        训练集内部，2024-01-01 至 2024-05-31 只决定棵数和分数符号：在更早的数据上训练，这段上按 NDCG@5 早停，这段 RankIC 为负则把分数乘 −1，然后用全部训练日按选定的棵数重训。这不是第三套样本。
+      </Text>
+      <Text>
+        验证集的表是每天得分最高的 5 只，等权，报持有 5、10、20 个交易日的收盘涨跌幅、同期基准和超额。基准是 A 股沪深 300、港股恒生、美股标普 500。超额 = 组合 − 基准。隔一个持有期再抽一天，减轻收益重叠。RankIC 仍按交易日计算再平均，用来看名次，不代替这张收益表，也不用分类准确率。
+      </Text>
+
       <H2>建议的验证顺序</H2>
       <Text>
-        1. 只改 20 日标签：同一市场、同一天，对未来超额收益做 z-score。用按日分组的 LightGBM LambdaRank 或线性模型。成功标准是验证集每日 RankIC 及其信息比率，外加多头减空头的价差。
+        1. 已做。20 日超额改成当日截面 z-score、五档相关度，按日分组的 LightGBM LambdaRank。5 日和 10 日是另外两个模型，切分和评价同上。特征还是个股自己的收益、波动和位置。
       </Text>
       <Text>
-        2. RankIC 稳定为正之后，再把输入从 6 列归一化行情换成收益、波动、换手和相对行业的因子。标签先不动。
+        2. 下一步。标签、切分和 Top 5 收益表不动，把输入换成带行业相对强弱的因子。看验证集上同一持有期的超额是否高于现在这 7 个价量特征。港股还要看极端组合的超额能否转正。
       </Text>
       <Text>
-        3. 因子模型有了可重复的 IC，再训练 MASTER 式网络：一个 batch 是同一天的一篮子股票，损失用 Margin 或 ListNet。网络宽度放到这一步，不放在现在的三分类上。
+        3. 因子模型在验证集上有可重复的超额之后，再训练 MASTER 式网络：一个 batch 是同一天的一篮子股票，损失用 Margin 或 ListNet。评价仍用上面的验证集收益表。网络不放回三分类。
       </Text>
       <Text size="small" tone="tertiary">
-        重叠的未来收益会让相邻样本不独立。RankIC 按交易日计算再平均，避免用逐行准确率高估结果。
+        重叠的未来收益会让相邻样本不独立。RankIC 和隔期超额都按交易日处理，避免用逐行准确率高估结果。
       </Text>
     </Stack>
   );
