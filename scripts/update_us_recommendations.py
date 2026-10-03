@@ -54,7 +54,7 @@ BOOKS = (
         "page": ROOT / "docs" / "live" / "ndx-intersection.md",
         "benchmark": DIR_DATASET / "ndx" / "benchmark.parquet",
         "copy": {
-            "title": "纳斯达克推荐跟踪：三个模型前 5 名交集",
+            "title": "纳斯达克笔记：三个模型前 5 名交集",
             "since": "2026-10-02",
             "models": "`checkpoints/ensemble/ranker_ndx_h{5,10,20}_s{0,1,2}.txt`",
             "bench": "纳斯达克 100",

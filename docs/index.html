@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Extreme Quant</title>
+<style>
+  :root {
+    --paper: #f4f0e6;
+    --ink: #1c1915;
+    --muted: #6f675e;
+    --rule: #d8d0c3;
+    --book: #1d4e7a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 56px 28px 72px; }
+  .kicker {
+    margin: 0 0 8px;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  h1, a strong {
+    font-family: "Iowan Old Style", Palatino, "Songti SC", "Source Han Serif SC", serif;
+    font-weight: 500;
+  }
+  h1 { margin: 0 0 8px; font-size: 32px; letter-spacing: -0.03em; line-height: 1.15; }
+  .lede { margin: 0; max-width: 52ch; color: var(--muted); }
+  .pages { margin: 36px 0 0; padding: 0; list-style: none; border-top: 2px solid var(--ink); }
+  .pages a {
+    display: block;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--rule);
+    color: inherit;
+    text-decoration: none;
+  }
+  .pages a:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+  .pages a:focus-visible { outline: 2px solid var(--book); outline-offset: 4px; }
+  .where {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+  }
+  a strong { display: block; font-size: 22px; letter-spacing: -0.02em; }
+  .desc { display: block; margin-top: 6px; max-width: 52ch; color: var(--muted); }
+  @media (max-width: 720px) {
+    main { padding: 32px 16px 48px; }
+    h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">Extreme Quant</p>
+  <h1>投资笔记</h1>
+  <p class="lede">自己记的。标普 500 和纳斯达克 100，每个期限三个模型各自取前 5，交集才记一笔。</p>
+  <ul class="pages">
+    <li>
+      <a href="live/intersection.html">
+        <span class="where">标普 / 纳指</span>
+        <strong>各笔记录，相对基准</strong>
+        <span class="desc">可切换市场和 5 / 10 / 20 日。看名单、至今超额，以及持有走势。</span>
+      </a>
+    </li>
+  </ul>
+</main>
+</body>
+</html>

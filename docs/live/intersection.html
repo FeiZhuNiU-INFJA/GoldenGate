@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>美股与纳指交集推荐</title>
+<title>美股与纳指交集笔记</title>
 <style>
   :root {
     --paper: #f4f0e6;
@@ -165,7 +165,7 @@
 <main>
   <header>
     <p class="kicker" id="kicker"></p>
-    <h1>各笔推荐，相对 <span id="bench-title"></span></h1>
+    <h1>各笔记录，相对 <span id="bench-title"></span></h1>
     <p class="lede" id="lede"></p>
     <p class="status" id="status"></p>
     <div class="switch" id="markets" role="group" aria-label="市场"></div>
@@ -210,7 +210,7 @@
   </section>
   <section>
     <h2>走到同一持有天数时</h2>
-    <p class="caption">把已经走到这一天的推荐等权平均。组合是名单涨跌，超额是组合减去基准。横轴不是日历，10-02 的入场在这里仍是第 0 天。</p>
+    <p class="caption">把已经走到这一天的名单等权平均。组合是名单涨跌，超额是组合减去基准。横轴不是日历，10-02 的入场在这里仍是第 0 天。</p>
     <div id="means" class="means"></div>
     <div class="plot">
       <svg id="excess" role="img" aria-label="走到同一持有天数时的平均组合和平均超额"></svg>
@@ -360,7 +360,7 @@ function renderMeans() {
       const value = document.createElement("b");
       value.textContent = "未到期";
       const note = document.createElement("em");
-      note.textContent = "还没有推荐走到这一天";
+      note.textContent = "还没有记录走到这一天";
       wrap.append(value, note);
     } else {
       [["组合", stat.port], ["超额", stat.excess]].forEach((item) => {

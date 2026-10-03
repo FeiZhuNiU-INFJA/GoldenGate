@@ -25,7 +25,7 @@ def render_html(
     names: dict[str, str],
     entries: dict[str, dict[str, float]],
     *,
-    page_title: str = "美股交集推荐",
+    page_title: str = "美股交集笔记",
     kicker: str = "标普 500 · 前 5 / 第 6–15 / 其余 · 三个模型前 5 交集",
     bench: str = "标普 500",
 ) -> str:
