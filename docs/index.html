@@ -29,22 +29,62 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
-  h1, a strong {
+  h1, h2, a strong, .facts b {
     font-family: "Iowan Old Style", Palatino, "Songti SC", "Source Han Serif SC", serif;
     font-weight: 500;
   }
   h1 { margin: 0 0 8px; font-size: 32px; letter-spacing: -0.03em; line-height: 1.15; }
-  .lede { margin: 0; max-width: 52ch; color: var(--muted); }
-  .pages { margin: 36px 0 0; padding: 0; list-style: none; border-top: 2px solid var(--ink); }
+  h2 { margin: 0 0 4px; font-size: 18px; }
+  .lede, .note { margin: 0; max-width: 58ch; color: var(--muted); }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 22px 0 0;
+  }
+  .back {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--ink);
+    padding: 6px 12px;
+    color: var(--paper);
+    background: var(--ink);
+    text-decoration: none;
+  }
+  .back:hover { background: #322c26; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--ink);
+    padding: 6px 12px;
+    color: var(--ink);
+    background: transparent;
+    text-decoration: none;
+  }
+  .chip:hover { background: #efe4d4; }
+  .back:focus-visible, .chip:focus-visible, .pages a:focus-visible { outline: 2px solid var(--book); outline-offset: 3px; }
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin: 32px 0 0;
+    padding: 16px 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .facts span { display: block; color: var(--muted); font-size: 12px; letter-spacing: 0.06em; }
+  .facts b { display: block; margin-top: 4px; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; }
+  section { margin-top: 36px; }
+  .pages { margin: 8px 0 0; padding: 0; list-style: none; border-top: 2px solid var(--ink); }
   .pages a {
     display: block;
-    padding: 18px 0;
+    padding: 16px 0;
     border-bottom: 1px solid var(--rule);
     color: inherit;
     text-decoration: none;
   }
   .pages a:hover strong { text-decoration: underline; text-underline-offset: 3px; }
-  .pages a:focus-visible { outline: 2px solid var(--book); outline-offset: 4px; }
   .where {
     display: block;
     margin-bottom: 4px;
@@ -53,27 +93,76 @@
     letter-spacing: 0.08em;
   }
   a strong { display: block; font-size: 22px; letter-spacing: -0.02em; }
-  .desc { display: block; margin-top: 6px; max-width: 52ch; color: var(--muted); }
+  .desc { display: block; margin-top: 6px; max-width: 58ch; color: var(--muted); }
+  .foot {
+    margin: 28px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .foot a { color: var(--ink); }
   @media (max-width: 720px) {
     main { padding: 32px 16px 48px; }
     h1 { font-size: 26px; }
+    .facts { grid-template-columns: 1fr; gap: 14px; }
   }
 </style>
 </head>
 <body>
 <main>
-  <p class="kicker">Extreme Quant</p>
-  <h1>投资笔记</h1>
-  <p class="lede">自己记的。标普 500 和纳斯达克 100，每个期限三个模型各自取前 5，交集才记一笔。</p>
-  <ul class="pages">
-    <li>
-      <a href="live/intersection.html">
-        <span class="where">标普 / 纳指</span>
-        <strong>各笔记录，相对基准</strong>
-        <span class="desc">可切换市场和 5 / 10 / 20 日。看名单、至今超额，以及持有走势。</span>
-      </a>
-    </li>
-  </ul>
+  <header>
+    <p class="kicker">Extreme Quant</p>
+    <h1>投资笔记</h1>
+    <p class="lede">自己记的。标普 500 和纳斯达克 100，每个期限三个模型各自取前 5，交集才记一笔。</p>
+    <p class="actions">
+      <a class="back" href="https://github.com/FeiZhuNiU-INFJA/GoldenGate">GitHub 仓库</a>
+      <a class="chip" href="https://github.com/FeiZhuNiU-INFJA/GoldenGate">★ Star</a>
+      <a class="chip" href="https://github.com/FeiZhuNiU-INFJA/GoldenGate/fork">Fork</a>
+      <a class="chip" href="https://github.com/FeiZhuNiU-INFJA/GoldenGate/subscription">Watch</a>
+    </p>
+  </header>
+
+  <div class="facts">
+    <p><span>市场</span><b>标普 500、纳斯达克 100</b></p>
+    <p><span>期限</span><b>5 / 10 / 20 日</b></p>
+    <p><span>怎么记</span><b>三个前 5 的交集</b></p>
+  </div>
+
+  <section>
+    <h2>这一本</h2>
+    <p class="note">页面上切换市场和期限。入场是信号日收盘，超额是名单等权减去同期基准。</p>
+    <ul class="pages">
+      <li>
+        <a href="live/intersection.html">
+          <span class="where">标普 / 纳指</span>
+          <strong>各笔记录，相对基准</strong>
+          <span class="desc">看名单、至今超额，以及持有走势。5、10、20 日各一本。</span>
+        </a>
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>账本</h2>
+    <p class="note">原文在仓库里。标普从 2026-10-01 记，纳指从 2026-10-02 记。</p>
+    <ul class="pages">
+      <li>
+        <a href="https://github.com/FeiZhuNiU-INFJA/GoldenGate/blob/master/docs/live/us-intersection.md">
+          <span class="where">标普 500</span>
+          <strong>us-intersection.md</strong>
+          <span class="desc">三个模型前 5 名的交集，以及持有到 5、10、20 日的涨跌。</span>
+        </a>
+      </li>
+      <li>
+        <a href="https://github.com/FeiZhuNiU-INFJA/GoldenGate/blob/master/docs/live/ndx-intersection.md">
+          <span class="where">纳斯达克 100</span>
+          <strong>ndx-intersection.md</strong>
+          <span class="desc">同一套记法，基准换成纳斯达克 100。</span>
+        </a>
+      </li>
+    </ul>
+  </section>
+
+  <p class="foot">仓库 <a href="https://github.com/FeiZhuNiU-INFJA/GoldenGate">FeiZhuNiU-INFJA/GoldenGate</a></p>
 </main>
 </body>
 </html>
