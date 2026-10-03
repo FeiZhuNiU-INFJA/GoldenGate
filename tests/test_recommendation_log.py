@@ -55,10 +55,15 @@ def test_path_stops_at_hold_20_and_ignores_sessions_off_the_benchmark():
 def test_render_marks_an_open_recommendation_as_not_yet_due():
     signal = {
         "date": "2026-10-01",
-        "picks": ["APP.US", "BR.US"],
-        "top5": {
-            "5": [{"symbol": "APP.US", "score": 0.09}, {"symbol": "BR.US", "score": 0.11}],
-            "10": [{"symbol": "APP.US", "score": 0.12}, {"symbol": "BR.US", "score": 0.10}],
+        "horizons": {
+            "5": {
+                "picks": ["APP.US", "BR.US"],
+                "seeds": {
+                    "0": [{"symbol": "APP.US", "score": 0.09}, {"symbol": "BR.US", "score": 0.11}],
+                    "1": [{"symbol": "APP.US", "score": 0.08}, {"symbol": "BR.US", "score": 0.10}],
+                    "2": [{"symbol": "APP.US", "score": 0.07}, {"symbol": "BR.US", "score": 0.12}],
+                },
+            }
         },
     }
     idx = pd.to_datetime(["2026-10-01"])
@@ -70,15 +75,15 @@ def test_render_marks_an_open_recommendation_as_not_yet_due():
     )
     text = render_log(
         [signal],
-        {"2026-10-01": path},
+        {"2026-10-01": {5: path}},
         {"APP.US": "AppLovin", "BR.US": "Broadridge"},
-        {"2026-10-01": {"APP.US": 100.0, "BR.US": 50.0}},
+        {"2026-10-01": {5: {"APP.US": 100.0, "BR.US": 50.0}}},
     )
     assert "未到期" in text
     assert "APP" in text
     assert "AppLovin" in text
     assert "+0.00%" in text
-    assert "us-intersection.html" in text
+    assert "intersection.html" in text
 
 
 def _page(html: str) -> dict:
@@ -93,10 +98,14 @@ def test_html_page_carries_the_open_path_and_escapes_names():
     signal = {
         "date": "2026-10-01",
         "note": "",
-        "picks": ["APP.US"],
-        "top5": {"5": [{"symbol": "APP.US", "score": 0.09}], "10": [{"symbol": "APP.US", "score": 0.12}]},
+        "horizons": {
+            "5": {
+                "picks": ["APP.US"],
+                "seeds": {"0": [{"symbol": "APP.US", "score": 0.09}]},
+            }
+        },
     }
-    flat = {"date": "2026-10-02", "picks": [], "top5": {}}
+    flat = {"date": "2026-10-02", "picks": [], "horizons": {}}
     idx = pd.to_datetime(["2026-10-01", "2026-10-02"])
     path = session_path(
         {"APP.US": pd.Series([100.0, 90.0], index=idx)},
@@ -106,19 +115,19 @@ def test_html_page_carries_the_open_path_and_escapes_names():
     )
     html = render_html(
         [signal, flat],
-        {"2026-10-01": path, "2026-10-02": pd.DataFrame()},
+        {"2026-10-01": {5: path}, "2026-10-02": {}},
         {"APP.US": "A<B&C>"},
-        {"2026-10-01": {"APP.US": 100.0}},
+        {"2026-10-01": {5: {"APP.US": 100.0}}},
     )
     assert html.startswith("<!DOCTYPE html>")
-    page = _page(html)
+    page = _page(html)["markets"][0]
     assert page["as_of"] == "2026-10-02"
-    book = page["books"][0]
+    book = page["groups"]["5"][0]
     assert book["picks"][0]["name"] == "A<B&C>"
     assert book["picks"][0]["symbol"] == "APP"
     assert book["held"] == 1
     assert book["horizons"]["5"]["status"] == "未到期"
     assert book["path"][1]["port"] == round(90.0 / 100.0 - 1.0, 8)
     assert book["path"][1]["excess"] == round((90.0 / 100.0 - 1.0) - (1010.0 / 1000.0 - 1.0), 8)
-    assert page["books"][1]["flat"] is True
-    assert page["books"][1]["horizons"]["5"]["status"] == "—"
+    assert page["groups"]["5"][1]["flat"] is True
+    assert page["groups"]["5"][1]["horizons"]["5"]["status"] == "—"

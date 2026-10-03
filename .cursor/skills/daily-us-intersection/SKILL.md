@@ -2,7 +2,7 @@
 name: daily-us-intersection
 description: >-
   Updates S&P 500 and Nasdaq-100 daily bars through the last completed US
-  close, records each market's 5-day and 10-day model top-5 intersection, and
+  close, records each horizon's three-model top-5 intersection, and
   refreshes both recommendation trackers. Use when the user asks to update
   market data, 更新数据, 当日交集, 今天的推荐, 标普, 纳斯达克, or to refresh
   docs/live/us-intersection.md or docs/live/ndx-intersection.md.
@@ -48,16 +48,17 @@ python scripts/update_us_recommendations.py
 
 This rewrites both ledgers and their pages:
 
-- S&P 500: `docs/live/us-intersection.md` and `docs/live/us-intersection.html`, models `checkpoints/ranker_us_h5.txt` and `checkpoints/ranker_us_h10.txt`. First date is 2026-10-01. A date with fewer than 450 names is left unrecorded.
-- Nasdaq-100: `docs/live/ndx-intersection.md` and `docs/live/ndx-intersection.html`, models `checkpoints/ranker_ndx_h5.txt` and `checkpoints/ranker_ndx_h10.txt`. First date is 2026-10-02. A date with fewer than 80 names is left unrecorded.
+- S&P 500 ledger: `docs/live/us-intersection.md`, models `checkpoints/ensemble/ranker_us_h{5,10,20}_s{0,1,2}.txt`. First date is 2026-10-01. A date with fewer than 450 names is left unrecorded.
+- Nasdaq-100 ledger: `docs/live/ndx-intersection.md`, models `checkpoints/ensemble/ranker_ndx_h{5,10,20}_s{0,1,2}.txt`. First date is 2026-10-02. A date with fewer than 80 names is left unrecorded.
+- Both markets share `docs/live/intersection.html`. The page switches between 标普 500 and 纳斯达克 100, then between the 5 / 10 / 20 day books.
 
 Shared rules, do not redo them by hand:
 
-- Score sign is `+1`. Each model contributes its top 5. The recommendation is the intersection. An empty intersection is 空仓.
+- Grades are ranks 1–5, 6–15, and the rest. Each horizon has three models, seeds 0, 1, and 2. Score sign is `+1`. Each model contributes its top 5. The recommendation for that horizon is the intersection. 5-day, 10-day, and 20-day books stay separate. An empty intersection is 空仓.
 - Do not edit the JSON to force a thin day in.
 - Dates before each book's first date are not backfilled.
 - The HTML is the performance view. Do not rebuild it by hand.
 
 ## 5. Reply
 
-Lead with each book's newest signal date, the names (or 空仓), and any new cumulative row: 持有天数, 组合, 大盘, 超额. S&P excess is versus the S&P 500. Nasdaq excess is versus the Nasdaq-100. Say which of 5 / 10 / 20 日 are still 未到期. Point at both HTML pages. The signal date is the last completed US session, not today's calendar date while the US cash session is open.
+Lead with each book's newest signal date, the names (or 空仓), and any new cumulative row: 持有天数, 组合, 大盘, 超额. S&P excess is versus the S&P 500. Nasdaq excess is versus the Nasdaq-100. Say which of 5 / 10 / 20 日 are still 未到期. Point at `docs/live/intersection.html`. The signal date is the last completed US session, not today's calendar date while the US cash session is open.

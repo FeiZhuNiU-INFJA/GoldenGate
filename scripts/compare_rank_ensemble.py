@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Five seeds per horizon, grades 1–20 / 21–40 / rest, then intersect.
+"""Three seeds per horizon, grades 1–5 / 6–15 / rest, then intersect top 5.
 
-Each seed is one model. A day's book is the symbols that land in every
-seed's top 20. An empty intersection is a day with no position. Saved
-ranker_*.txt checkpoints are left as they are; these models go under
-checkpoints/ensemble/.
+Each seed is one model. A day's book is the symbols in every seed's top 5.
+An empty intersection is a day with no position. Models are written under
+checkpoints/ensemble/ and do not replace ranker_{market}_h{horizon}.txt.
 """
 from __future__ import annotations
 
@@ -37,9 +36,10 @@ _jsonable = _horizons._jsonable
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("compare_rank_ensemble")
 
-SEEDS = (0, 1, 2, 3, 4)
-GRADE_CUTS = (20, 40)
-TOP_KS = (10, 20)
+SEEDS = (0, 1, 2)
+GRADE_CUTS = (5, 15)
+TOP_KS = (5,)
+MARKETS_DEFAULT = ("us", "ndx")
 
 
 def main() -> None:
@@ -49,6 +49,7 @@ def main() -> None:
     parser.add_argument("--top-ks", nargs="+", type=int, default=list(TOP_KS))
     parser.add_argument("--out-dir", default="ensemble")
     parser.add_argument("--summary", default="rank_ensemble_summary.json")
+    parser.add_argument("--markets", nargs="+", default=list(MARKETS_DEFAULT), choices=list(MARKETS))
     args = parser.parse_args()
     seeds = tuple(args.seeds)
     grade_cuts = tuple(args.grade_cuts)
@@ -66,7 +67,7 @@ def main() -> None:
         "top_ks": list(top_ks),
         "markets": {},
     }
-    for market in MARKETS:
+    for market in args.markets:
         logger.info("market=%s", market)
         summary["markets"][market] = _market(
             panel.loc[panel["market"] == market].copy(),

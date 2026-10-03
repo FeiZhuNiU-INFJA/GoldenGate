@@ -34,7 +34,7 @@ def test_cross_section_ranks_winners_higher():
     # pad to min_names
     for i in range(20):
         rows.append({"market": "cn", "trade_date": "2023-01-03", "symbol": f"P{i}", "exret_20d": -0.01 + i * 0.001})
-    out = assign_cross_section(pd.DataFrame(rows), min_names=20, n_bins=5)
+    out = assign_cross_section(pd.DataFrame(rows), min_names=20)
     by_sym = out.set_index("symbol")
     assert by_sym.loc["B", "z"] > by_sym.loc["A", "z"] > by_sym.loc["C", "z"]
     assert by_sym.loc["B", "relevance"] >= by_sym.loc["A", "relevance"]
@@ -42,17 +42,16 @@ def test_cross_section_ranks_winners_higher():
     assert abs(out["z"].mean()) < 1e-8
 
 
-def test_top_grade_is_the_best_ten_names():
+def test_default_grades_are_top_five_then_through_fifteen():
     rows = [
         {"market": "us", "trade_date": "2024-01-02", "symbol": f"S{i:02d}", "exret_5d": i / 100}
         for i in range(40)
     ]
-    out = assign_cross_section(pd.DataFrame(rows), value_col="exret_5d", min_names=20, top_names=10)
+    out = assign_cross_section(pd.DataFrame(rows), value_col="exret_5d", min_names=20)
     by_sym = out.set_index("symbol")
-    assert set(by_sym.loc[[f"S{i:02d}" for i in range(30, 40)], "relevance"]) == {4}
-    assert by_sym.loc["S29", "relevance"] == 3
-    assert by_sym.loc["S00", "relevance"] == 0
-    assert (out["relevance"] == 4).sum() == 10
+    assert set(by_sym.loc[[f"S{i:02d}" for i in range(35, 40)], "relevance"]) == {2}
+    assert set(by_sym.loc[[f"S{i:02d}" for i in range(25, 35)], "relevance"]) == {1}
+    assert set(by_sym.loc[[f"S{i:02d}" for i in range(0, 25)], "relevance"]) == {0}
 
 
 def test_three_grades_are_top_ten_next_ten_and_the_rest():
@@ -79,9 +78,9 @@ def test_ties_at_the_cutoff_stay_in_the_top_grade():
         }
         for i in range(30)
     ]
-    out = assign_cross_section(pd.DataFrame(rows), value_col="exret_5d", min_names=20, top_names=10)
-    assert (out.loc[out["exret_5d"] == 1.0, "relevance"] == 4).all()
-    assert int((out["relevance"] == 4).sum()) == 12
+    out = assign_cross_section(pd.DataFrame(rows), value_col="exret_5d", min_names=20)
+    assert (out.loc[out["exret_5d"] == 1.0, "relevance"] == 2).all()
+    assert int((out["relevance"] == 2).sum()) == 12
 
 
 def test_features_use_only_past_closes():

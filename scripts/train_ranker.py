@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT))
 from config.settings import DIR_CHECKPOINTS, DIR_DATASET, DIR_REPORTS, MARKETS, TEST_END, TEST_START, TRAIN_END, TRAIN_START, VAL_END, VAL_START
 from data import store
 from eval.rank_metrics import summarize_scores
-from labels.cross_section import assign_cross_section
+from labels.cross_section import LABEL_GAIN, assign_cross_section
 from train.rank_features import RANK_FEATURES, features_from_labeled
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -84,6 +84,7 @@ def _fit_market(train: pd.DataFrame, val: pd.DataFrame, min_child: int):
         subsample_freq=1,
         colsample_bytree=0.8,
         reg_lambda=1.0,
+        label_gain=LABEL_GAIN,
         n_jobs=8,
         random_state=0,
         verbosity=-1,

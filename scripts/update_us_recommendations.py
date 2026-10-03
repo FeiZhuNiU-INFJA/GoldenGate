@@ -22,43 +22,46 @@ from config.settings import DIR_DATASET
 from data import store
 from data.akshare_client import _force_requests_direct, _maybe_clear_proxies
 from eval.hold_returns import top_k
-from eval.recommendation_html import render_html
-from eval.recommendation_log import render_log, session_path
+from eval.recommendation_html import render_page
+from eval.recommendation_log import page_data, render_log, session_path
 from train.rank_features import RANK_FEATURES, _usable_close, rank_frame
 
-SIGNS = {5: 1, 10: 1}
+STRATEGY = "grades-5-15-seeds-3-top5"
+SEEDS = (0, 1, 2)
+HORIZONS = (5, 10, 20)
+TOP_K = 5
+MODEL_DIR = ROOT / "checkpoints" / "ensemble"
+HTML_PAGE = ROOT / "docs" / "live" / "intersection.html"
 BOOKS = (
     {
         "key": "us",
+        "start": "2026-10-01",
         "min_names": 450,
-        "models": {5: ROOT / "checkpoints" / "ranker_us_h5.txt", 10: ROOT / "checkpoints" / "ranker_us_h10.txt"},
+        "model_dir": MODEL_DIR,
         "ledger": ROOT / "docs" / "live" / "us-intersection.json",
         "page": ROOT / "docs" / "live" / "us-intersection.md",
-        "html": ROOT / "docs" / "live" / "us-intersection.html",
         "benchmark": DIR_DATASET / "us" / "benchmark.parquet",
         "copy": None,
-        "html_title": "美股交集推荐",
-        "kicker": "标普 500 · 5 日模型 ∩ 10 日模型 · 各取前 5",
+        "kicker": "标普 500 · 前 5 / 第 6–15 / 其余 · 三个模型前 5 交集",
         "bench_label": "标普 500",
     },
     {
         "key": "ndx",
+        "start": "2026-10-02",
         "min_names": 80,
-        "models": {5: ROOT / "checkpoints" / "ranker_ndx_h5.txt", 10: ROOT / "checkpoints" / "ranker_ndx_h10.txt"},
+        "model_dir": MODEL_DIR,
         "ledger": ROOT / "docs" / "live" / "ndx-intersection.json",
         "page": ROOT / "docs" / "live" / "ndx-intersection.md",
-        "html": ROOT / "docs" / "live" / "ndx-intersection.html",
         "benchmark": DIR_DATASET / "ndx" / "benchmark.parquet",
         "copy": {
-            "title": "纳斯达克推荐跟踪：5 日 ∩ 10 日 Top 5",
+            "title": "纳斯达克推荐跟踪：三个模型前 5 名交集",
             "since": "2026-10-02",
-            "models": "`checkpoints/ranker_ndx_h5.txt`、`checkpoints/ranker_ndx_h10.txt`",
+            "models": "`checkpoints/ensemble/ranker_ndx_h{5,10,20}_s{0,1,2}.txt`",
             "bench": "纳斯达克 100",
             "ledger": "docs/live/ndx-intersection.json",
-            "html": "docs/live/ndx-intersection.html",
+            "html": "docs/live/intersection.html",
         },
-        "html_title": "纳斯达克交集推荐",
-        "kicker": "纳斯达克 100 · 5 日模型 ∩ 10 日模型 · 各取前 5",
+        "kicker": "纳斯达克 100 · 前 5 / 第 6–15 / 其余 · 三个模型前 5 交集",
         "bench_label": "纳斯达克 100",
     },
 )
@@ -69,43 +72,54 @@ def main() -> None:
     _maybe_clear_proxies()
     _force_requests_direct()
     _refresh_ndx()
-    for book in BOOKS:
-        _update_book(book)
+    markets = [_update_book(book) for book in BOOKS]
+    HTML_PAGE.write_text(render_page(markets, page_title="美股与纳指交集推荐"))
+    for stale in (HTML_PAGE.parent / "us-intersection.html", HTML_PAGE.parent / "ndx-intersection.html"):
+        if stale.exists():
+            stale.unlink()
+    print(f"wrote {HTML_PAGE.relative_to(ROOT)}")
 
 
-def _update_book(book: dict) -> None:
+def _update_book(book: dict) -> dict:
     ledger = json.loads(book["ledger"].read_text())
+    notes = {item["date"]: item.get("note") or "" for item in ledger.get("signals") or []}
+    rebuilt = ledger.get("strategy") != STRATEGY
+    if rebuilt:
+        ledger = {
+            "market": book["key"],
+            "strategy": STRATEGY,
+            "k": TOP_K,
+            "seeds": list(SEEDS),
+            "grade_cuts": [5, 15],
+            "horizons": list(HORIZONS),
+            "start": book["start"],
+            "signals": [],
+        }
     bench = _benchmark(book["benchmark"])
-    added = _record_new(book, ledger, bench)
+    added = _record_new(book, ledger, bench, notes)
     paths, entries = _paths(book, ledger, bench)
     names = _names(book["key"])
     book["page"].write_text(render_log(ledger["signals"], paths, names, entries, book=book["copy"]))
-    book["html"].write_text(
-        render_html(
-            ledger["signals"],
-            paths,
-            names,
-            entries,
-            page_title=book["html_title"],
-            kicker=book["kicker"],
-            bench=book["bench_label"],
-        )
-    )
-    if added:
+    if rebuilt or added:
         book["ledger"].write_text(json.dumps(ledger, ensure_ascii=False, indent=2) + "\n")
-    print(
-        f"wrote {book['page'].relative_to(ROOT)} and {book['html'].relative_to(ROOT)} "
-        f"signals={len(ledger['signals'])} added={added}"
-    )
+    print(f"wrote {book['page'].relative_to(ROOT)} signals={len(ledger['signals'])} added={added}")
+    payload = page_data(ledger["signals"], paths, names, entries)
+    return {
+        "key": book["key"],
+        "label": book["bench_label"],
+        "bench": book["bench_label"],
+        "kicker": book["kicker"],
+        "as_of": payload["as_of"],
+        "horizons": payload["horizons"],
+        "groups": payload["groups"],
+    }
 
 
-def _record_new(book: dict, ledger: dict, bench: pd.Series) -> int:
+def _record_new(book: dict, ledger: dict, bench: pd.Series, notes: dict[str, str]) -> int:
     pending = _pending_dates(ledger, bench)
     if not pending:
         return 0
-    import lightgbm as lgb
-
-    models = {horizon: lgb.Booster(model_file=str(path)) for horizon, path in book["models"].items()}
+    models = _load_models(book)
     panel = _feature_panel(book, pending, bench)
     added = 0
     for day in pending:
@@ -113,10 +127,26 @@ def _record_new(book: dict, ledger: dict, bench: pd.Series) -> int:
         if len(scored) < book["min_names"]:
             print(f"{book['key']} skip {day.date()}: only {len(scored)} names, left unrecorded")
             break
-        ledger["signals"].append(_signal(day, scored, models))
+        signal = _signal(day, scored, models)
+        signal["note"] = notes.get(signal["date"], "")
+        ledger["signals"].append(signal)
         added += 1
-        print(f"{book['key']} recorded {day.date()} picks={ledger['signals'][-1]['picks']}")
+        picks = {horizon: signal["horizons"][str(horizon)]["picks"] for horizon in HORIZONS}
+        print(f"{book['key']} recorded {day.date()} picks={picks}")
     return added
+
+
+def _load_models(book: dict) -> dict:
+    import lightgbm as lgb
+
+    signs = json.loads((book["model_dir"] / "manifest.json").read_text())["signs"]
+    models = {}
+    for horizon in HORIZONS:
+        for seed in SEEDS:
+            key = f"{book['key']}_h{horizon}_s{seed}"
+            path = book["model_dir"] / f"ranker_{key}.txt"
+            models[(horizon, seed)] = (lgb.Booster(model_file=str(path)), int(signs[key]))
+    return models
 
 
 def _pending_dates(ledger: dict, bench: pd.Series) -> list[pd.Timestamp]:
@@ -154,40 +184,52 @@ def _feature_panel(book: dict, dates: list[pd.Timestamp], bench: pd.Series) -> p
 
 
 def _signal(day: pd.Timestamp, scored: pd.DataFrame, models: dict) -> dict:
-    frames = []
-    for horizon, model in models.items():
-        part = scored.sort_values("symbol").copy()
-        part["score"] = model.predict(part[list(RANK_FEATURES)]) * SIGNS[horizon]
-        frames.append(part)
-    boards = {}
-    picked = None
-    for horizon, frame in zip(models, frames):
-        board = []
-        for symbol in top_k(frame, 5)["symbol"]:
-            score = float(frame.loc[frame["symbol"] == symbol, "score"].iloc[0])
-            board.append({"symbol": symbol, "score": round(score, 6)})
-        boards[str(horizon)] = board
-        symbols = {item["symbol"] for item in board}
-        picked = symbols if picked is None else picked & symbols
-    return {"date": day.strftime("%Y-%m-%d"), "note": "", "picks": sorted(picked or []), "top5": boards}
+    ordered = scored.sort_values("symbol")
+    features = ordered[list(RANK_FEATURES)]
+    books = {}
+    for horizon in HORIZONS:
+        boards = {}
+        picked = None
+        for seed in SEEDS:
+            model, sign = models[(horizon, seed)]
+            part = ordered[["trade_date", "symbol"]].copy()
+            part["score"] = model.predict(features) * sign
+            board = []
+            for symbol in top_k(part, TOP_K)["symbol"]:
+                score = float(part.loc[part["symbol"] == symbol, "score"].iloc[0])
+                board.append({"symbol": symbol, "score": round(score, 6)})
+            boards[str(seed)] = board
+            symbols = {item["symbol"] for item in board}
+            picked = symbols if picked is None else picked & symbols
+        books[str(horizon)] = {"picks": sorted(picked or []), "seeds": boards}
+    return {"date": day.strftime("%Y-%m-%d"), "note": "", "horizons": books}
 
 
 def _paths(book: dict, ledger: dict, bench: pd.Series) -> tuple[dict[str, pd.DataFrame], dict[str, dict[str, float]]]:
-    needed = {symbol for signal in ledger["signals"] for symbol in signal.get("picks") or []}
+    needed = {
+        symbol
+        for signal in ledger["signals"]
+        for horizon in HORIZONS
+        for symbol in (signal.get("horizons") or {}).get(str(horizon), {}).get("picks") or []
+    }
     closes = {symbol: _masked_close(book["key"], symbol) for symbol in sorted(needed)}
     paths = {}
     entries = {}
     for signal in ledger["signals"]:
-        symbols = list(signal.get("picks") or [])
-        path = session_path({symbol: closes[symbol] for symbol in symbols}, bench, signal["date"], symbols)
-        paths[signal["date"]] = path
-        signal_day = pd.Timestamp(signal["date"]).normalize()
+        paths[signal["date"]] = {}
         entries[signal["date"]] = {}
-        for symbol in symbols:
-            series = closes[symbol]
-            series = series[np.isfinite(series.to_numpy()) & (series.to_numpy() > 0)]
-            if signal_day in series.index:
-                entries[signal["date"]][symbol] = float(series.loc[signal_day])
+        signal_day = pd.Timestamp(signal["date"]).normalize()
+        for horizon in HORIZONS:
+            symbols = list((signal.get("horizons") or {}).get(str(horizon), {}).get("picks") or [])
+            paths[signal["date"]][horizon] = session_path(
+                {symbol: closes[symbol] for symbol in symbols}, bench, signal["date"], symbols
+            )
+            entries[signal["date"]][horizon] = {}
+            for symbol in symbols:
+                series = closes[symbol]
+                series = series[np.isfinite(series.to_numpy()) & (series.to_numpy() > 0)]
+                if signal_day in series.index:
+                    entries[signal["date"]][horizon][symbol] = float(series.loc[signal_day])
     return paths, entries
 
 

@@ -97,6 +97,16 @@ _TEMPLATE = """<!DOCTYPE html>
     white-space: nowrap;
   }
   .meta { margin: 0 0 8px; }
+  .switch { display: flex; gap: 8px; margin: 18px 0 0; }
+  .switch button {
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  .switch button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
   @media (max-width: 720px) {
     main { padding: 24px 16px 48px; }
     h1 { font-size: 26px; }
@@ -111,9 +121,11 @@ _TEMPLATE = """<!DOCTYPE html>
 <body>
 <main>
   <header>
-    <p class="kicker">__KICKER__</p>
-    <h1>推荐相对 __BENCH__ 走到了哪</h1>
+    <p class="kicker" id="kicker"></p>
+    <h1>推荐相对 <span id="bench-title"></span> 走到了哪</h1>
     <p class="lede" id="lede"></p>
+    <div class="switch" id="markets"></div>
+    <div class="switch" id="horizons"></div>
   </header>
   <section>
     <h2>同一持有天数上的平均超额</h2>
@@ -148,9 +160,10 @@ _TEMPLATE = """<!DOCTYPE html>
     <h2 id="detail-title"></h2>
     <p class="meta" id="detail-meta"></p>
     <div class="plot">
-      <svg id="pair" role="img" aria-label="选中推荐的组合、__BENCH__ 和超额"></svg>
+      <svg id="pair" role="img" aria-label="选中推荐的组合、基准和超额"></svg>
+      <div class="tip" hidden></div>
     </div>
-    <p class="caption">纵轴是从信号日收盘起的累计涨跌幅（%）。横轴是 __BENCH__ 交易日。组合是名单等权。超额 = 组合 − 同期 __BENCH__。</p>
+    <p class="caption" id="pair-cap"></p>
     <div class="table-wrap">
       <table id="path"></table>
     </div>
@@ -158,11 +171,74 @@ _TEMPLATE = """<!DOCTYPE html>
 </main>
 <script id="data" type="application/json">__DATA__</script>
 <script>
-const data = JSON.parse(document.getElementById("data").textContent);
-const books = data.books;
+const payload = JSON.parse(document.getElementById("data").textContent);
+const markets = payload.markets;
+let marketKey = markets[0].key;
+let horizonKey = "5";
+let groups = {};
+let books = [];
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function currentMarket() {
+  return markets.find((item) => item.key === marketKey) || markets[0];
+}
+
+function benchName() {
+  return currentMarket().bench;
+}
+
+function syncBooks() {
+  const current = currentMarket();
+  groups = current.groups || {};
+  const horizons = (current.horizons || [5]).map(String);
+  if (!horizons.includes(horizonKey)) horizonKey = horizons[0];
+  books = groups[horizonKey] || [];
+}
+
+syncBooks();
 let selected = pickDefault();
 let animated = false;
+
+function renderMarkets() {
+  const host = document.getElementById("markets");
+  host.replaceChildren();
+  markets.forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = item.label;
+    button.setAttribute("aria-pressed", item.key === marketKey ? "true" : "false");
+    button.addEventListener("click", () => {
+      if (item.key === marketKey) return;
+      marketKey = item.key;
+      syncBooks();
+      selected = pickDefault();
+      animated = false;
+      render();
+    });
+    host.append(button);
+  });
+}
+
+function renderSwitch() {
+  const host = document.getElementById("horizons");
+  host.replaceChildren();
+  (currentMarket().horizons || [5, 10, 20]).forEach((horizon) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    const key = String(horizon);
+    button.textContent = horizon + " 日模型";
+    button.setAttribute("aria-pressed", key === horizonKey ? "true" : "false");
+    button.addEventListener("click", () => {
+      if (key === horizonKey) return;
+      horizonKey = key;
+      books = groups[horizonKey] || [];
+      selected = pickDefault();
+      animated = false;
+      render();
+    });
+    host.append(button);
+  });
+}
 
 function pickDefault() {
   const live = books.filter((book) => !book.flat && book.path.length);
@@ -243,7 +319,7 @@ function renderLede() {
     ? latest.picks.map((pick) => pick.symbol).join("、")
     : "空仓";
   document.getElementById("lede").textContent =
-    "截至 " + (data.as_of || "—") + " 收盘。账上 " + books.length + " 笔，其中 " +
+    "截至 " + (currentMarket().as_of || "—") + " 收盘。账上 " + books.length + " 笔，其中 " +
     open + " 笔有持仓" + (flat ? "，" + flat + " 笔空仓" : "") +
     "。最近一笔是 " + (latest ? latest.date + " " + names : "—") +
     "。平均超额只比较走到同一天的推荐。";
@@ -328,8 +404,9 @@ function draw(svg, series, xmax, animateMean) {
 }
 
 function showTip(event, text) {
-  const tip = document.getElementById("tip");
   const plot = event.currentTarget.ownerSVGElement.parentElement;
+  const tip = plot.querySelector(".tip");
+  document.querySelectorAll(".tip").forEach((node) => { node.hidden = node !== tip; });
   const rect = plot.getBoundingClientRect();
   tip.hidden = false;
   tip.textContent = text;
@@ -337,8 +414,10 @@ function showTip(event, text) {
   tip.style.top = (event.clientY - rect.top - 28) + "px";
 }
 
-function hideTip() {
-  document.getElementById("tip").hidden = true;
+function hideTip(event) {
+  const plot = event.currentTarget.ownerSVGElement.parentElement;
+  const tip = plot.querySelector(".tip");
+  if (tip) tip.hidden = true;
 }
 
 const palette = ["#1d4e7a", "#8a5a2b", "#2f6b52", "#6d4c6e", "#4e6070", "#7a6244"];
@@ -367,7 +446,7 @@ function excessSeries() {
       data: book.path.map((row) => ({
         x: row.hold,
         y: row.excess,
-        label: book.date + " 持有 " + row.hold + " 日 超额 " + pct(row.excess) + "，组合 " + pct(row.port) + "，__BENCH__ " + pct(row.bench),
+        label: book.date + " 持有 " + row.hold + " 日 超额 " + pct(row.excess) + "，组合 " + pct(row.port) + "，" + benchName() + " " + pct(row.bench),
       })),
     });
   });
@@ -458,7 +537,7 @@ function renderDetail() {
   }
   title.textContent = book.date + " " + bookLabel(book);
   if (book.flat) {
-    meta.textContent = "这一天两个前 5 没有交集，不建仓。";
+    meta.textContent = "这一天三个模型的前 5 没有交集，不建仓。";
     svg.replaceChildren();
     table.replaceChildren();
     return;
@@ -471,11 +550,11 @@ function renderDetail() {
   const xmax = Math.max(xMax(), book.held || 0);
   draw(svg, [
     { name: "组合", color: "#1d4e7a", width: 2.4, data: book.path.map((row) => ({ x: row.hold, y: row.port, label: "持有 " + row.hold + " 日 组合 " + pct(row.port) })) },
-    { name: "__BENCH__", color: "#8a8176", width: 2, data: book.path.map((row) => ({ x: row.hold, y: row.bench, label: "持有 " + row.hold + " 日 __BENCH__ " + pct(row.bench) })) },
+    { name: benchName(), color: "#8a8176", width: 2, data: book.path.map((row) => ({ x: row.hold, y: row.bench, label: "持有 " + row.hold + " 日 " + benchName() + " " + pct(row.bench) })) },
     { name: "超额", color: "#9c2f2a", width: 1.6, data: book.path.map((row) => ({ x: row.hold, y: row.excess, label: "持有 " + row.hold + " 日 超额 " + pct(row.excess) })) },
   ], xmax, false);
   const symbols = book.picks.map((pick) => pick.symbol);
-  const head = ["日期", "持有"].concat(symbols, ["组合", "__BENCH__", "超额"]);
+  const head = ["日期", "持有"].concat(symbols, ["组合", benchName(), "超额"]);
   table.replaceChildren();
   const thead = document.createElement("thead");
   const hr = document.createElement("tr");
@@ -505,6 +584,15 @@ function renderDetail() {
 }
 
 function render() {
+  syncBooks();
+  const current = currentMarket();
+  document.getElementById("kicker").textContent = current.kicker || "";
+  document.getElementById("bench-title").textContent = current.bench;
+  document.getElementById("pair-cap").textContent =
+    "纵轴是从信号日收盘起的累计涨跌幅（%）。横轴是 " + current.bench +
+    " 交易日。组合是名单等权。超额 = 组合 − 同期 " + current.bench + "。";
+  renderMarkets();
+  renderSwitch();
   renderLede();
   renderMeans();
   renderExcess();
@@ -524,6 +612,13 @@ window.addEventListener("resize", () => {
 """
 
 
+def render_page(markets: list[dict], *, page_title: str) -> str:
+    """One page with a market switch. Each market carries ``page_data`` plus label fields."""
+    blob = json.dumps({"markets": markets}, ensure_ascii=False, separators=(",", ":"))
+    blob = blob.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    return _TEMPLATE.replace("__PAGE_TITLE__", page_title).replace("__DATA__", blob)
+
+
 def render_html(
     signals: list[dict],
     paths: dict,
@@ -531,15 +626,21 @@ def render_html(
     entries: dict[str, dict[str, float]],
     *,
     page_title: str = "美股交集推荐",
-    kicker: str = "美股 · 5 日模型 ∩ 10 日模型 · 各取前 5",
+    kicker: str = "标普 500 · 前 5 / 第 6–15 / 其余 · 三个模型前 5 交集",
     bench: str = "标普 500",
 ) -> str:
     payload = page_data(signals, paths, names, entries)
-    blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-    blob = blob.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
-    page = (
-        _TEMPLATE.replace("__PAGE_TITLE__", page_title)
-        .replace("__KICKER__", kicker)
-        .replace("__BENCH__", bench)
+    return render_page(
+        [
+            {
+                "key": "book",
+                "label": bench,
+                "bench": bench,
+                "kicker": kicker,
+                "as_of": payload["as_of"],
+                "horizons": payload["horizons"],
+                "groups": payload["groups"],
+            }
+        ],
+        page_title=page_title,
     )
-    return page.replace("__DATA__", blob)

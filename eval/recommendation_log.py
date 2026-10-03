@@ -7,12 +7,12 @@ import pandas as pd
 HORIZONS = (5, 10, 20)
 
 _US_BOOK = {
-    "title": "美股推荐跟踪：5 日 ∩ 10 日 Top 5",
+    "title": "美股推荐跟踪：三个模型前 5 名交集",
     "since": "2026-10-01",
-    "models": "`checkpoints/ranker_us_h5.txt`、`checkpoints/ranker_us_h10.txt`",
+    "models": "`checkpoints/ensemble/ranker_us_h{5,10,20}_s{0,1,2}.txt`",
     "bench": "标普 500",
     "ledger": "docs/live/us-intersection.json",
-    "html": "docs/live/us-intersection.html",
+    "html": "docs/live/intersection.html",
 }
 
 
@@ -101,9 +101,10 @@ def render_log(
         f"# {spec['title']}",
         "",
         (
-            f"从 {spec['since']} 收盘开始记。每一天用已经训好的 5 日模型和 10 日模型"
-            f"（{spec['models']}，分数符号都是 +1）各自取前 5 名，交集就是当天的推荐。"
-            f"交集为空也记一行，当天没有持仓。早于 {spec['since']} 的交易日不补。"
+            f"从 {spec['since']} 收盘开始记。标签分三档：前 5、第 6–15、其余。"
+            f"每个期限用三个已经训好的模型（{spec['models']}，分数符号都是 +1）各自取前 5 名，"
+            f"三个名单的交集就是当天的推荐。交集为空也记一行，当天没有持仓。"
+            f"5 日、10 日、20 日各自一本账。早于 {spec['since']} 的交易日不补。"
         ),
         "",
         "行情更新之后运行：",
@@ -134,13 +135,19 @@ def render_log(
         "",
         "收盘价不是正数、相对前后约 11 日中位数偏离超过 5 倍、或单日涨跌超过 2.5 倍的打印，视为没有收盘。",
         "",
-        "## 总表",
-        "",
-        _summary_table(signals, paths),
-        "",
     ]
-    for signal in signals:
-        lines.extend(_signal_section(signal, paths.get(signal["date"], pd.DataFrame()), names, entries.get(signal["date"], {})))
+    for horizon in HORIZONS:
+        lines.extend(["", f"## {horizon} 日模型", "", "### 总表", "", _summary_table(signals, paths, horizon), ""])
+        for signal in signals:
+            lines.extend(
+                _signal_section(
+                    signal,
+                    horizon,
+                    _frame(paths, signal["date"], horizon),
+                    names,
+                    _entry_map(entries, signal["date"], horizon),
+                )
+            )
     lines.append("")
     return "\n".join(lines)
 
@@ -151,69 +158,68 @@ def page_data(
     names: dict[str, str],
     entries: dict[str, dict[str, float]],
 ) -> dict:
-    """Serializable book of cumulative returns. Fractions, not percents."""
-    books = []
+    """Serializable books of cumulative returns, one list per model horizon. Fractions, not percents."""
+    groups = {str(horizon): [] for horizon in HORIZONS}
     as_of = ""
     for signal in signals:
-        picks = list(signal.get("picks") or [])
-        path = paths.get(signal["date"], pd.DataFrame())
-        flat = not picks
-        day_entries = entries.get(signal["date"], {})
-        scores = _score_lookup(signal)
-        pick_rows = []
-        for symbol in picks:
-            score5, score10 = scores.get(symbol, (None, None))
-            pick_rows.append(
-                {
-                    "symbol": _code(symbol),
-                    "name": names.get(symbol, ""),
-                    "entry": _num(day_entries.get(symbol)),
-                    "score5": _num(score5),
-                    "score10": _num(score10),
-                }
-            )
-        path_rows = []
-        if not flat and not path.empty:
-            for _, row in path.iterrows():
-                day = pd.Timestamp(row["trade_date"]).strftime("%Y-%m-%d")
-                path_rows.append(
+        for horizon in HORIZONS:
+            picks = list(_horizon_book(signal, horizon).get("picks") or [])
+            path = _frame(paths, signal["date"], horizon)
+            flat = not picks
+            day_entries = _entry_map(entries, signal["date"], horizon)
+            scores = _score_lookup(signal, horizon)
+            pick_rows = []
+            for symbol in picks:
+                pick_rows.append(
                     {
-                        "date": day,
-                        "hold": int(row["hold"]),
-                        "port": _num(row["port"]),
-                        "bench": _num(row["bench"]),
-                        "excess": _num(row["excess"]),
-                        "names": {_code(symbol): _num(row[symbol]) for symbol in picks},
+                        "symbol": _code(symbol),
+                        "name": names.get(symbol, ""),
+                        "entry": _num(day_entries.get(symbol)),
+                        "scores": [_num(scores.get(symbol, {}).get(seed)) for seed in (0, 1, 2)],
                     }
                 )
-                if day > as_of:
-                    as_of = day
-        horizons = {}
-        for horizon in HORIZONS:
-            state = horizon_state(path, horizon, flat=flat)
-            if isinstance(state, str):
-                horizons[str(horizon)] = {"status": state}
-            else:
-                horizons[str(horizon)] = {
-                    "status": "到期",
-                    "port": _num(state["port"]),
-                    "bench": _num(state["bench"]),
-                    "excess": _num(state["excess"]),
+            path_rows = []
+            if not flat and not path.empty:
+                for _, row in path.iterrows():
+                    day = pd.Timestamp(row["trade_date"]).strftime("%Y-%m-%d")
+                    path_rows.append(
+                        {
+                            "date": day,
+                            "hold": int(row["hold"]),
+                            "port": _num(row["port"]),
+                            "bench": _num(row["bench"]),
+                            "excess": _num(row["excess"]),
+                            "names": {_code(symbol): _num(row[symbol]) for symbol in picks},
+                        }
+                    )
+                    if day > as_of:
+                        as_of = day
+            holds = {}
+            for hold in HORIZONS:
+                state = horizon_state(path, hold, flat=flat)
+                if isinstance(state, str):
+                    holds[str(hold)] = {"status": state}
+                else:
+                    holds[str(hold)] = {
+                        "status": "到期",
+                        "port": _num(state["port"]),
+                        "bench": _num(state["bench"]),
+                        "excess": _num(state["excess"]),
+                    }
+            groups[str(horizon)].append(
+                {
+                    "date": signal["date"],
+                    "note": (signal.get("note") or "").strip(),
+                    "flat": flat,
+                    "held": None if flat or path.empty else int(path["hold"].max()),
+                    "picks": pick_rows,
+                    "horizons": holds,
+                    "path": path_rows,
                 }
-        books.append(
-            {
-                "date": signal["date"],
-                "note": (signal.get("note") or "").strip(),
-                "flat": flat,
-                "held": None if flat or path.empty else int(path["hold"].max()),
-                "picks": pick_rows,
-                "horizons": horizons,
-                "path": path_rows,
-            }
-        )
+            )
     if not as_of and signals:
         as_of = max(item["date"] for item in signals)
-    return {"as_of": as_of, "books": books}
+    return {"as_of": as_of, "horizons": list(HORIZONS), "groups": groups}
 
 
 def _num(value) -> float | None:
@@ -222,7 +228,37 @@ def _num(value) -> float | None:
     return round(float(value), 8)
 
 
-def _summary_table(signals: list[dict], paths: dict[str, pd.DataFrame]) -> str:
+def _horizon_book(signal: dict, horizon: int) -> dict:
+    raw = signal.get("horizons") or {}
+    book = raw.get(str(horizon)) or raw.get(horizon) or {}
+    return book if isinstance(book, dict) else {}
+
+
+def _frame(paths: dict, date: str, horizon: int) -> pd.DataFrame:
+    day = paths.get(date, {})
+    if isinstance(day, pd.DataFrame):
+        return day
+    if horizon in day:
+        frame = day[horizon]
+    elif str(horizon) in day:
+        frame = day[str(horizon)]
+    else:
+        return pd.DataFrame()
+    return frame if isinstance(frame, pd.DataFrame) else pd.DataFrame()
+
+
+def _entry_map(entries: dict, date: str, horizon: int) -> dict[str, float]:
+    day = entries.get(date, {})
+    if not day:
+        return {}
+    sample = next(iter(day.values()))
+    if not isinstance(sample, dict):
+        return day
+    found = day.get(horizon) or day.get(str(horizon)) or {}
+    return found
+
+
+def _summary_table(signals: list[dict], paths: dict, horizon: int) -> str:
     header = (
         "| 信号日 | 名单 | 已持有 | "
         "5 日组合 | 5 日大盘 | 5 日超额 | "
@@ -232,14 +268,14 @@ def _summary_table(signals: list[dict], paths: dict[str, pd.DataFrame]) -> str:
     rule = "|" + "---|" * 12
     body = [header, rule]
     for signal in signals:
-        picks = list(signal.get("picks") or [])
-        path = paths.get(signal["date"], pd.DataFrame())
+        picks = list(_horizon_book(signal, horizon).get("picks") or [])
+        path = _frame(paths, signal["date"], horizon)
         flat = not picks
         held = 0 if path.empty else int(path["hold"].max())
         names = "空仓" if flat else "、".join(_code(symbol) for symbol in picks)
         cells = [signal["date"], names, "—" if flat else str(held)]
-        for horizon in HORIZONS:
-            state = horizon_state(path, horizon, flat=flat)
+        for hold in HORIZONS:
+            state = horizon_state(path, hold, flat=flat)
             if isinstance(state, str):
                 cells.extend([state, state, state])
             else:
@@ -248,27 +284,33 @@ def _summary_table(signals: list[dict], paths: dict[str, pd.DataFrame]) -> str:
     return "\n".join(body)
 
 
-def _signal_section(signal: dict, path: pd.DataFrame, names: dict[str, str], entries: dict[str, float]) -> list[str]:
-    picks = list(signal.get("picks") or [])
-    lines = ["", f"## {signal['date']}", ""]
+def _signal_section(
+    signal: dict,
+    horizon: int,
+    path: pd.DataFrame,
+    names: dict[str, str],
+    entries: dict[str, float],
+) -> list[str]:
+    picks = list(_horizon_book(signal, horizon).get("picks") or [])
+    lines = ["", f"### {signal['date']}", ""]
     note = (signal.get("note") or "").strip()
     if note:
         lines.extend([note, ""])
+    lines.extend(_board_lines(signal, horizon, names))
     if not picks:
-        lines.extend(["这一天两个前 5 名没有交集，不建仓。", ""])
-        lines.extend(_board_lines(signal, names))
+        lines.extend(["", "这一天三个模型的前 5 名没有交集，不建仓。", ""])
         return lines
-    lines.extend(_board_lines(signal, names))
     lines.extend(["", "入场：", ""])
-    lines.append("| 代码 | 名称 | 入场收盘 | 5 日分 | 10 日分 |")
-    lines.append("|---|---|---:|---:|---:|")
-    scores = _score_lookup(signal)
+    lines.append("| 代码 | 名称 | 入场收盘 | 种子 0 | 种子 1 | 种子 2 |")
+    lines.append("|---|---|---:|---:|---:|---:|")
+    scores = _score_lookup(signal, horizon)
     for symbol in picks:
         close = entries.get(symbol)
         close_text = "—" if close is None or not np.isfinite(close) else f"{close:.2f}"
-        s5, s10 = scores.get(symbol, (None, None))
+        seed_scores = scores.get(symbol, {})
         lines.append(
-            f"| {_code(symbol)} | {names.get(symbol, '')} | {close_text} | {_score(s5)} | {_score(s10)} |"
+            f"| {_code(symbol)} | {names.get(symbol, '')} | {close_text} | "
+            f"{_score(seed_scores.get(0))} | {_score(seed_scores.get(1))} | {_score(seed_scores.get(2))} |"
         )
     lines.extend(["", "累计涨跌幅：", ""])
     if path.empty:
@@ -287,28 +329,28 @@ def _signal_section(signal: dict, path: pd.DataFrame, names: dict[str, str], ent
     return lines
 
 
-def _board_lines(signal: dict, names: dict[str, str]) -> list[str]:
-    top5 = signal.get("top5") or {}
+def _board_lines(signal: dict, horizon: int, names: dict[str, str]) -> list[str]:
+    seeds = _horizon_book(signal, horizon).get("seeds") or {}
     lines = []
-    for horizon in (5, 10):
-        board = top5.get(str(horizon)) or top5.get(horizon) or []
+    for seed in (0, 1, 2):
+        board = seeds.get(str(seed)) or seeds.get(seed) or []
         if not board:
             continue
         text = "、".join(
             f"{_code(item['symbol'])} {_score(item.get('score'))} {names.get(item['symbol'], '')}".rstrip()
             for item in board
         )
-        lines.append(f"{horizon} 日前 5：{text}")
+        lines.append(f"种子 {seed} 前 5：{text}")
     return lines
 
 
-def _score_lookup(signal: dict) -> dict[str, tuple[float | None, float | None]]:
+def _score_lookup(signal: dict, horizon: int) -> dict[str, dict[int, float]]:
     found: dict[str, dict[int, float]] = {}
-    top5 = signal.get("top5") or {}
-    for horizon in (5, 10):
-        for item in top5.get(str(horizon)) or top5.get(horizon) or []:
-            found.setdefault(item["symbol"], {})[horizon] = item.get("score")
-    return {symbol: (scores.get(5), scores.get(10)) for symbol, scores in found.items()}
+    seeds = _horizon_book(signal, horizon).get("seeds") or {}
+    for seed in (0, 1, 2):
+        for item in seeds.get(str(seed)) or seeds.get(seed) or []:
+            found.setdefault(item["symbol"], {})[seed] = item.get("score")
+    return found
 
 
 def _positive(series: pd.Series) -> pd.Series:
