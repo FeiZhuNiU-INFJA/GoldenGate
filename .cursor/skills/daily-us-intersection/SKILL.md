@@ -50,14 +50,14 @@ This rewrites both ledgers and their pages:
 
 - S&P 500 ledger: `docs/live/us-intersection.md`, models `checkpoints/ensemble/ranker_us_h{5,10,20}_s{0,1,2}.txt`. First date is 2026-10-01. A date with fewer than 450 names is left unrecorded.
 - Nasdaq-100 ledger: `docs/live/ndx-intersection.md`, models `checkpoints/ensemble/ranker_ndx_h{5,10,20}_s{0,1,2}.txt`. First date is 2026-10-02. A date with fewer than 80 names is left unrecorded.
-- Both markets share `docs/live/intersection.html`. The page switches between 标普 500 and 纳斯达克 100, then between the 5 / 10 / 20 day books.
+- Both markets share `docs/live/intersection.html`, which reads `docs/live/intersection-data.js`. The script rewrites the data file, not the page. The page switches between 标普 500 and 纳斯达克 100, then between the 5 / 10 / 20 day books.
 
 Shared rules, do not redo them by hand:
 
 - Grades are ranks 1–5, 6–15, and the rest. Each horizon has three models, seeds 0, 1, and 2. Score sign is `+1`. Each model contributes its top 5. The recommendation for that horizon is the intersection. 5-day, 10-day, and 20-day books stay separate. An empty intersection is 空仓.
 - Do not edit the JSON to force a thin day in.
 - Dates before each book's first date are not backfilled.
-- The HTML is the performance view. Do not rebuild it by hand.
+- The HTML page is fixed. The script only rewrites `docs/live/intersection-data.js`.
 
 ## 5. Reply
 

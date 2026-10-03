@@ -86,10 +86,11 @@ def test_render_marks_an_open_recommendation_as_not_yet_due():
     assert "intersection.html" in text
 
 
-def _page(html: str) -> dict:
-    start = html.index('<script id="data" type="application/json">') + len('<script id="data" type="application/json">')
-    end = html.index("</script>", start)
-    blob = html[start:end]
+def _page(script: str) -> dict:
+    prefix = "window.INTERSECTION = "
+    assert script.startswith(prefix)
+    assert script.endswith(";\n")
+    blob = script[len(prefix) : -2]
     assert "<" not in blob
     return json.loads(blob)
 
@@ -119,7 +120,6 @@ def test_html_page_carries_the_open_path_and_escapes_names():
         {"APP.US": "A<B&C>"},
         {"2026-10-01": {5: {"APP.US": 100.0}}},
     )
-    assert html.startswith("<!DOCTYPE html>")
     page = _page(html)["markets"][0]
     assert page["as_of"] == "2026-10-02"
     book = page["groups"]["5"][0]

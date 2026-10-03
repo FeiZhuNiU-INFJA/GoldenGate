@@ -70,7 +70,16 @@
   }
   .means span { display: block; color: var(--muted); font-size: 12px; }
   .means b { display: block; margin-top: 4px; font-size: 28px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
-  .means em { display: block; margin-top: 2px; color: var(--muted); font-style: normal; font-size: 12px; }
+  .means em { display: block; margin-top: 6px; color: var(--muted); font-style: normal; font-size: 12px; }
+  .means .pair {
+    display: flex;
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 8px;
+    margin: 8px 0 0;
+  }
+  .means .pair span { display: inline; }
+  .means .pair b { margin-top: 0; font-size: 22px; }
   .up { color: var(--up); }
   .down { color: var(--down); }
   .plot { position: relative; }
@@ -201,28 +210,28 @@
   </section>
   <section>
     <h2>走到同一持有天数时</h2>
-    <p class="caption">把每一笔的超额按持有天数对齐。横轴不是日历，10-02 的入场在这里仍是第 0 天。</p>
+    <p class="caption">把已经走到这一天的推荐等权平均。组合是名单涨跌，超额是组合减去基准。横轴不是日历，10-02 的入场在这里仍是第 0 天。</p>
     <div id="means" class="means"></div>
     <div class="plot">
-      <svg id="excess" role="img" aria-label="各笔推荐的累计超额，横轴为持有天数"></svg>
+      <svg id="excess" role="img" aria-label="走到同一持有天数时的平均组合和平均超额"></svg>
       <div id="tip" class="tip" hidden></div>
     </div>
     <p class="caption" id="excess-cap"></p>
     <ul id="legend" class="legend"></ul>
   </section>
 </main>
-<script id="data" type="application/json">{"markets":[{"key":"us","label":"标普 500","bench":"标普 500","kicker":"标普 500 · 前 5 / 第 6–15 / 其余 · 三个模型前 5 交集","as_of":"2026-10-02","horizons":[5,10,20],"groups":{"5":[{"date":"2026-10-01","note":"2026-10-02 记下的第一笔，依据 2026-10-01 美股收盘。","flat":false,"held":1,"picks":[{"symbol":"COHR","name":"Coherent Corp.","entry":319.19,"scores":[0.222117,0.879269,0.502506]},{"symbol":"FICO","name":"Fair Isaac","entry":661.75,"scores":[0.232284,0.768056,0.33938]},{"symbol":"MRNA","name":"Moderna","entry":188.94,"scores":[0.221212,0.554245,0.422421]}],"horizons":{"5":{"status":"未到期"},"10":{"status":"未到期"},"20":{"status":"未到期"}},"path":[{"date":"2026-10-01","hold":0,"port":0.0,"bench":0.0,"excess":0.0,"names":{"COHR":0.0,"FICO":0.0,"MRNA":0.0}},{"date":"2026-10-02","hold":1,"port":0.0202768,"bench":0.00733977,"excess":0.01293703,"names":{"COHR":0.0559228,"FICO":-0.00075557,"MRNA":0.00566317}}]},{"date":"2026-10-02","note":"","flat":false,"held":0,"picks":[{"symbol":"FICO","name":"Fair Isaac","entry":661.25,"scores":[0.229426,0.835944,0.522822]},{"symbol":"MRNA","name":"Moderna","entry":190.01,"scores":[0.220159,0.715464,0.417799]},{"symbol":"P","name":"Everpure","entry":140.14,"scores":[0.232896,0.714684,0.50384]}],"horizons":{"5":{"status":"未到期"},"10":{"status":"未到期"},"20":{"status":"未到期"}},"path":[{"date":"2026-10-02","hold":0,"port":0.0,"bench":0.0,"excess":0.0,"names":{"FICO":0.0,"MRNA":0.0,"P":0.0}}]}],"10":[{"date":"2026-10-01","note":"2026-10-02 记下的第一笔，依据 2026-10-01 美股收盘。","flat":false,"held":1,"picks":[{"symbol":"COHR","name":"Coherent Corp.","entry":319.19,"scores":[0.484736,0.968419,0.142468]},{"symbol":"LITE","name":"Lumentum","entry":1045.78,"scores":[0.433264,0.61839,0.0978]},{"symbol":"MRNA","name":"Moderna","entry":188.94,"scores":[0.521221,0.505461,0.112652]}],"horizons":{"5":{"status":"未到期"},"10":{"status":"未到期"},"20":{"status":"未到期"}},"path":[{"date":"2026-10-01","hold":0,"port":0.0,"bench":0.0,"excess":0.0,"names":{"COHR":0.0,"LITE":0.0,"MRNA":0.0}},{"date":"2026-10-02","hold":1,"port":0.03316357,"bench":0.00733977,"excess":0.02582379,"names":{"COHR":0.0559228,"LITE":0.03790472,"MRNA":0.00566317}}]},{"date":"2026-10-02","note":"","flat":true,"held":null,"picks":[],"horizons":{"5":{"status":"—"},"10":{"status":"—"},"20":{"status":"—"}},"path":[]}],"20":[{"date":"2026-10-01","note":"2026-10-02 记下的第一笔，依据 2026-10-01 美股收盘。","flat":false,"held":1,"picks":[{"symbol":"COHR","name":"Coherent Corp.","entry":319.19,"scores":[0.173728,0.276954,0.112658]},{"symbol":"MRNA","name":"Moderna","entry":188.94,"scores":[0.224173,0.261864,0.132285]}],"horizons":{"5":{"status":"未到期"},"10":{"status":"未到期"},"20":{"status":"未到期"}},"path":[{"date":"2026-10-01","hold":0,"port":0.0,"bench":0.0,"excess":0.0,"names":{"COHR":0.0,"MRNA":0.0}},{"date":"2026-10-02","hold":1,"port":0.03079299,"bench":0.00733977,"excess":0.02345322,"names":{"COHR":0.0559228,"MRNA":0.00566317}}]},{"date":"2026-10-02","note":"","flat":false,"held":0,"picks":[{"symbol":"COIN","name":"Coinbase","entry":183.0,"scores":[0.172246,0.243617,0.094318]},{"symbol":"MRNA","name":"Moderna","entry":190.01,"scores":[0.212041,0.301285,0.126818]},{"symbol":"P","name":"Everpure","entry":140.14,"scores":[0.198527,0.253317,0.126818]}],"horizons":{"5":{"status":"未到期"},"10":{"status":"未到期"},"20":{"status":"未到期"}},"path":[{"date":"2026-10-02","hold":0,"port":0.0,"bench":0.0,"excess":0.0,"names":{"COIN":0.0,"MRNA":0.0,"P":0.0}}]}]}},{"key":"ndx","label":"纳斯达克 100","bench":"纳斯达克 100","kicker":"纳斯达克 100 · 前 5 / 第 6–15 / 其余 · 三个模型前 5 交集","as_of":"2026-10-02","horizons":[5,10,20],"groups":{"5":[{"date":"2026-10-02","note":"","flat":false,"held":0,"picks":[{"symbol":"APP","name":"AppLovin","entry":268.22,"scores":[0.097481,0.247283,0.215021]},{"symbol":"ARM","name":"Arm Holdings","entry":307.49,"scores":[0.071346,0.330554,0.224883]},{"symbol":"INTC","name":"Intel","entry":119.33,"scores":[0.067984,0.418925,0.170768]},{"symbol":"MSTR","name":"MicroStrategy","entry":160.01,"scores":[0.10797,0.373366,0.202261]}],"horizons":{"5":{"status":"未到期"},"10":{"status":"未到期"},"20":{"status":"未到期"}},"path":[{"date":"2026-10-02","hold":0,"port":0.0,"bench":0.0,"excess":0.0,"names":{"APP":0.0,"ARM":0.0,"INTC":0.0,"MSTR":0.0}}]}],"10":[{"date":"2026-10-02","note":"","flat":false,"held":0,"picks":[{"symbol":"ALAB","name":"Astera Labs","entry":350.33,"scores":[0.726126,0.487225,0.369668]},{"symbol":"ARM","name":"Arm Holdings","entry":307.49,"scores":[0.526651,0.280151,0.201407]},{"symbol":"INTC","name":"Intel","entry":119.33,"scores":[0.404698,0.2793,0.280989]},{"symbol":"MSTR","name":"MicroStrategy","entry":160.01,"scores":[0.207375,0.343427,0.314951]}],"horizons":{"5":{"status":"未到期"},"10":{"status":"未到期"},"20":{"status":"未到期"}},"path":[{"date":"2026-10-02","hold":0,"port":0.0,"bench":0.0,"excess":0.0,"names":{"ALAB":0.0,"ARM":0.0,"INTC":0.0,"MSTR":0.0}}]}],"20":[{"date":"2026-10-02","note":"","flat":false,"held":0,"picks":[{"symbol":"ADBE","name":"Adobe Inc.","entry":118.8388,"scores":[0.293229,0.24191,0.240928]},{"symbol":"ALAB","name":"Astera Labs","entry":350.33,"scores":[0.438272,0.373107,0.340679]},{"symbol":"MSTR","name":"MicroStrategy","entry":160.01,"scores":[0.499068,0.367162,0.34929]}],"horizons":{"5":{"status":"未到期"},"10":{"status":"未到期"},"20":{"status":"未到期"}},"path":[{"date":"2026-10-02","hold":0,"port":0.0,"bench":0.0,"excess":0.0,"names":{"ADBE":0.0,"ALAB":0.0,"MSTR":0.0}}]}]}}]}</script>
+<script src="intersection-data.js"></script>
 <script>
-const payload = JSON.parse(document.getElementById("data").textContent);
-const markets = payload.markets;
-let marketKey = markets[0].key;
+const payload = window.INTERSECTION || { markets: [] };
+const markets = payload.markets || [];
+let marketKey = markets.length ? markets[0].key : "";
 let horizonKey = "5";
 let groups = {};
 let books = [];
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function currentMarket() {
-  return markets.find((item) => item.key === marketKey) || markets[0];
+  return markets.find((item) => item.key === marketKey) || markets[0] || null;
 }
 
 function benchName() {
@@ -231,14 +240,22 @@ function benchName() {
 
 function syncBooks() {
   const current = currentMarket();
+  if (!current) {
+    groups = {};
+    books = [];
+    return;
+  }
   groups = current.groups || {};
   const horizons = (current.horizons || [5]).map(String);
   if (!horizons.includes(horizonKey)) horizonKey = horizons[0];
   books = groups[horizonKey] || [];
 }
 
-syncBooks();
-let selected = pickDefault();
+let selected = "";
+if (markets.length) {
+  syncBooks();
+  selected = pickDefault();
+}
 let animated = false;
 
 function renderMarkets() {
@@ -308,15 +325,15 @@ function rowAt(book, hold) {
 }
 
 function meanAt(hold) {
-  const values = [];
+  const rows = [];
   books.forEach((book) => {
     if (book.flat) return;
     const row = rowAt(book, hold);
-    if (row) values.push(row.excess);
+    if (row && row.port !== null && row.excess !== null) rows.push(row);
   });
-  if (!values.length) return null;
-  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
-  return { mean, n: values.length };
+  if (!rows.length) return null;
+  const avg = (key) => rows.reduce((sum, row) => sum + row[key], 0) / rows.length;
+  return { port: avg("port"), excess: avg("excess"), n: rows.length };
 }
 
 function lastExcess(book) {
@@ -338,17 +355,29 @@ function renderMeans() {
     const wrap = document.createElement("div");
     const label = document.createElement("span");
     label.textContent = "持有 " + hold + " 日";
-    const value = document.createElement("b");
-    const note = document.createElement("em");
+    wrap.append(label);
     if (!stat) {
+      const value = document.createElement("b");
       value.textContent = "未到期";
+      const note = document.createElement("em");
       note.textContent = "还没有推荐走到这一天";
+      wrap.append(value, note);
     } else {
-      value.textContent = pct(stat.mean);
-      value.className = tone(stat.mean);
+      [["组合", stat.port], ["超额", stat.excess]].forEach((item) => {
+        const pair = document.createElement("p");
+        pair.className = "pair";
+        const name = document.createElement("span");
+        name.textContent = item[0];
+        const value = document.createElement("b");
+        value.textContent = pct(item[1]);
+        value.className = tone(item[1]);
+        pair.append(name, value);
+        wrap.append(pair);
+      });
+      const note = document.createElement("em");
       note.textContent = stat.n + " 笔等权";
+      wrap.append(note);
     }
-    wrap.append(label, value, note);
     host.append(wrap);
   });
 }
@@ -444,7 +473,7 @@ function draw(svg, series, xmax, animateMean) {
       "stroke-linejoin": "round",
       "stroke-linecap": "round",
     });
-    if (line.mean) path.setAttribute("stroke-dasharray", "7 5");
+    if (line.dash) path.setAttribute("stroke-dasharray", "7 5");
     svg.append(path);
     if (animateMean && line.mean && !reduced && !animated && line.data.length > 1) {
       path.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, easing: "ease-out", fill: "forwards" });
@@ -479,37 +508,20 @@ function hideTip(event) {
   if (tip) tip.hidden = true;
 }
 
-const palette = ["#1d4e7a", "#8a5a2b", "#2f6b52", "#6d4c6e", "#4e6070", "#7a6244"];
-
 function excessSeries() {
-  const lines = [];
-  const mean = [];
+  const port = [];
+  const excess = [];
   for (let hold = 0; hold <= xMax(); hold += 1) {
     const stat = meanAt(hold);
     if (!stat) continue;
-    mean.push({
-      x: hold,
-      y: stat.mean,
-      label: "持有 " + hold + " 日平均超额 " + pct(stat.mean) + "（" + stat.n + " 笔）",
-    });
+    const count = "（" + stat.n + " 笔）";
+    port.push({ x: hold, y: stat.port, label: "持有 " + hold + " 日平均组合 " + pct(stat.port) + count });
+    excess.push({ x: hold, y: stat.excess, label: "持有 " + hold + " 日平均超额 " + pct(stat.excess) + count });
   }
-  lines.push({ name: "平均超额", color: "#1c1915", width: 2.6, mean: true, data: mean });
-  books.forEach((book, index) => {
-    if (book.flat || !book.path.length) return;
-    const on = book.date === selected;
-    lines.push({
-      name: book.date,
-      date: book.date,
-      color: palette[index % palette.length],
-      width: on ? 2.4 : 1.25,
-      data: book.path.map((row) => ({
-        x: row.hold,
-        y: row.excess,
-        label: book.date + " 持有 " + row.hold + " 日 超额 " + pct(row.excess) + "，组合 " + pct(row.port) + "，" + benchName() + " " + pct(row.bench),
-      })),
-    });
-  });
-  return lines;
+  return [
+    { name: "平均组合", color: "#1d4e7a", width: 2.4, mean: true, data: port },
+    { name: "平均超额", color: "#1c1915", width: 2.2, mean: true, dash: true, data: excess },
+  ];
 }
 
 function renderExcess() {
@@ -521,14 +533,14 @@ function renderExcess() {
     plot.hidden = true;
     document.getElementById("legend").replaceChildren();
     document.getElementById("excess-cap").textContent =
-      "还没有一笔走过入场日。持有满 1 天之后，这里按持有天数把各笔超额叠在一起。";
+      "还没有一笔走过入场日。持有满 1 天之后，这里画出平均组合和平均超额。";
     return;
   }
   plot.hidden = false;
   draw(document.getElementById("excess"), lines, xmax, true);
   animated = true;
   document.getElementById("excess-cap").textContent =
-    "纵轴是相对各自信号日收盘的累计超额。细线是每一笔，虚线是已经走到这一天的那些笔的平均。目前最长持有 " + xmax + " 天。";
+    "蓝线是平均组合，虚线是平均超额。都从各自信号日收盘算起。目前最长持有 " + xmax + " 天。";
   const legend = document.getElementById("legend");
   legend.replaceChildren();
   lines.forEach((line) => {
@@ -748,6 +760,10 @@ function settle(panel, animate) {
 let shown = "";
 
 function render() {
+  if (!markets.length) {
+    document.getElementById("lede").textContent = "还没有数字。运行 python scripts/update_us_recommendations.py 生成 intersection-data.js。";
+    return;
+  }
   syncBooks();
   const current = currentMarket();
   document.getElementById("kicker").textContent = current.kicker || "";

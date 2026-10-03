@@ -8,7 +8,7 @@
 python scripts/update_us_recommendations.py
 ```
 
-脚本把账本里还没有的新交易日补上，并按本地复权收盘重算下面的涨跌幅。名单在 `docs/live/ndx-intersection.json`。同一轮会重写 `docs/live/intersection.html`，也会更新另一本账（标普 500 与纳斯达克 100）。手改本页或那个 HTML 会被下一次运行覆盖；想留一句话，写在对应信号的 `note` 字段。
+脚本把账本里还没有的新交易日补上，并按本地复权收盘重算下面的涨跌幅。名单在 `docs/live/ndx-intersection.json`。同一轮把数字写进 `docs/live/intersection-data.js`，页面 `docs/live/intersection.html` 不重写，也会更新另一本账（标普 500 与纳斯达克 100）。手改本页会被下一次运行覆盖；想留一句话，写在对应信号的 `note` 字段。
 
 ## 口径
 

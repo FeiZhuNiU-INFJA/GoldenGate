@@ -22,7 +22,7 @@ from config.settings import DIR_DATASET
 from data import store
 from data.akshare_client import _force_requests_direct, _maybe_clear_proxies
 from eval.hold_returns import top_k
-from eval.recommendation_html import render_page
+from eval.recommendation_html import render_data
 from eval.recommendation_log import page_data, render_log, session_path
 from train.rank_features import RANK_FEATURES, _usable_close, rank_frame
 
@@ -31,7 +31,7 @@ SEEDS = (0, 1, 2)
 HORIZONS = (5, 10, 20)
 TOP_K = 5
 MODEL_DIR = ROOT / "checkpoints" / "ensemble"
-HTML_PAGE = ROOT / "docs" / "live" / "intersection.html"
+DATA_PAGE = ROOT / "docs" / "live" / "intersection-data.js"
 BOOKS = (
     {
         "key": "us",
@@ -73,11 +73,11 @@ def main() -> None:
     _force_requests_direct()
     _refresh_ndx()
     markets = [_update_book(book) for book in BOOKS]
-    HTML_PAGE.write_text(render_page(markets, page_title="美股与纳指交集推荐"))
-    for stale in (HTML_PAGE.parent / "us-intersection.html", HTML_PAGE.parent / "ndx-intersection.html"):
+    DATA_PAGE.write_text(render_data(markets))
+    for stale in (DATA_PAGE.parent / "us-intersection.html", DATA_PAGE.parent / "ndx-intersection.html"):
         if stale.exists():
             stale.unlink()
-    print(f"wrote {HTML_PAGE.relative_to(ROOT)}")
+    print(f"wrote {DATA_PAGE.relative_to(ROOT)}")
 
 
 def _update_book(book: dict) -> dict:

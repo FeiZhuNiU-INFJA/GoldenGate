@@ -36,15 +36,16 @@ EQ_SKIP_YFINANCE=1 python scripts/update_data.py --markets us ndx --end YYYYMMDD
 python scripts/update_us_recommendations.py
 ```
 
-`update_us_recommendations.py` 会补上账本里还没有的交易日，并重写页面：
+`update_us_recommendations.py` 会补上账本里还没有的交易日，并写出页面用的数字：
 
 | 文件 | 内容 |
 |------|------|
 | `docs/live/us-intersection.md` | 标普，从 2026-10-01 起 |
 | `docs/live/ndx-intersection.md` | 纳指，从 2026-10-02 起 |
-| `docs/live/intersection.html` | 两本账的持有表现，可切换市场和 5 / 10 / 20 日 |
+| `docs/live/intersection.html` | 固定页面，可切换市场和 5 / 10 / 20 日 |
+| `docs/live/intersection-data.js` | 上面那个页面读的数字，每次运行重写 |
 
-模型在 `checkpoints/ensemble/ranker_{us,ndx}_h{5,10,20}_s{0,1,2}.txt`。每个期限三个种子各取前 5，交集才是当天推荐；交集为空记为空仓。当天名字太少（标普少于 450、纳指少于 80）不记。手改 markdown 或 HTML 会被下一次运行覆盖；要留一句话，写在对应 JSON 信号的 `note` 字段。
+模型在 `checkpoints/ensemble/ranker_{us,ndx}_h{5,10,20}_s{0,1,2}.txt`。每个期限三个种子各取前 5，交集才是当天推荐；交集为空记为空仓。当天名字太少（标普少于 450、纳指少于 80）不记。手改 markdown 会被下一次运行覆盖。页面本身不重写。要留一句话，写在对应 JSON 信号的 `note` 字段。
 
 ## 数据
 
