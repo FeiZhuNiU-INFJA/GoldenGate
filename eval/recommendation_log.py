@@ -6,6 +6,15 @@ import pandas as pd
 
 HORIZONS = (5, 10, 20)
 
+_US_BOOK = {
+    "title": "美股推荐跟踪：5 日 ∩ 10 日 Top 5",
+    "since": "2026-10-01",
+    "models": "`checkpoints/ranker_us_h5.txt`、`checkpoints/ranker_us_h10.txt`",
+    "bench": "标普 500",
+    "ledger": "docs/live/us-intersection.json",
+    "html": "docs/live/us-intersection.html",
+}
+
 
 def session_path(
     symbol_close: dict[str, pd.Series],
@@ -83,12 +92,19 @@ def render_log(
     paths: dict[str, pd.DataFrame],
     names: dict[str, str],
     entries: dict[str, dict[str, float]],
+    book: dict | None = None,
 ) -> str:
     """Human-readable tracker. Tables are regenerated from the ledger and bars."""
+    spec = _US_BOOK if book is None else book
+    bench = spec["bench"]
     lines = [
-        "# 美股推荐跟踪：5 日 ∩ 10 日 Top 5",
+        f"# {spec['title']}",
         "",
-        "从 2026-10-01 收盘开始记。每一天用已经训好的美股 5 日模型和 10 日模型（`checkpoints/ranker_us_h5.txt`、`checkpoints/ranker_us_h10.txt`，分数符号都是 +1）各自取前 5 名，交集就是当天的推荐。交集为空也记一行，当天没有持仓。早于 2026-10-01 的交易日不补。",
+        (
+            f"从 {spec['since']} 收盘开始记。每一天用已经训好的 5 日模型和 10 日模型"
+            f"（{spec['models']}，分数符号都是 +1）各自取前 5 名，交集就是当天的推荐。"
+            f"交集为空也记一行，当天没有持仓。早于 {spec['since']} 的交易日不补。"
+        ),
         "",
         "行情更新之后运行：",
         "",
@@ -96,13 +112,25 @@ def render_log(
         "python scripts/update_us_recommendations.py",
         "```",
         "",
-        "脚本把账本里还没有的新交易日补上，并按本地复权收盘重算下面的涨跌幅。名单在 `docs/live/us-intersection.json`。同一轮会重写 `docs/live/us-intersection.html`。手改本页或那个 HTML 会被下一次运行覆盖；想留一句话，写在对应信号的 `note` 字段。",
+        (
+            "脚本把账本里还没有的新交易日补上，并按本地复权收盘重算下面的涨跌幅。"
+            f"名单在 `{spec['ledger']}`。同一轮会重写 `{spec['html']}`，"
+            "也会更新另一本账（标普 500 与纳斯达克 100）。"
+            "手改本页或那个 HTML 会被下一次运行覆盖；想留一句话，写在对应信号的 `note` 字段。"
+        ),
         "",
         "## 口径",
         "",
-        "入场价是信号日收盘。持有 n 个交易日按标普 500 自己的交易日往后数，涨跌幅 = 当天收盘 / 信号日收盘 − 1。组合是推荐名单等权。超额 = 组合涨跌幅 − 同期标普涨跌幅。",
+        (
+            f"入场价是信号日收盘。持有 n 个交易日按{bench} 自己的交易日往后数，"
+            f"涨跌幅 = 当天收盘 / 信号日收盘 − 1。组合是推荐名单等权。超额 = 组合涨跌幅 − 同期{bench} 涨跌幅。"
+        ),
         "",
-        "名单里有一只当天没有可用收盘，这一行就不写。持有天数仍按标普的那一天计，所以后面的行不会把缺的那一天算进持有期。5 / 10 / 20 日三列就是持有天数走到 5、10、20 的那一行；还没走到写「未到期」。表记到持有 20 日为止。",
+        (
+            f"名单里有一只当天没有可用收盘，这一行就不写。持有天数仍按{bench} 的那一天计，"
+            "所以后面的行不会把缺的那一天算进持有期。5 / 10 / 20 日三列就是持有天数走到 5、10、20 的那一行；"
+            "还没走到写「未到期」。表记到持有 20 日为止。"
+        ),
         "",
         "收盘价不是正数、相对前后约 11 日中位数偏离超过 5 倍、或单日涨跌超过 2.5 倍的打印，视为没有收盘。",
         "",

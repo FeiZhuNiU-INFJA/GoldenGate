@@ -104,8 +104,8 @@
 <body>
 <main>
   <header>
-    <p class="kicker">美股 · 5 日模型 ∩ 10 日模型 · 各取前 5</p>
-    <h1>推荐相对标普走到了哪</h1>
+    <p class="kicker">标普 500 · 5 日模型 ∩ 10 日模型 · 各取前 5</p>
+    <h1>推荐相对 标普 500 走到了哪</h1>
     <p class="lede" id="lede"></p>
   </header>
   <section>
@@ -141,9 +141,9 @@
     <h2 id="detail-title"></h2>
     <p class="meta" id="detail-meta"></p>
     <div class="plot">
-      <svg id="pair" role="img" aria-label="选中推荐的组合、标普和超额"></svg>
+      <svg id="pair" role="img" aria-label="选中推荐的组合、标普 500 和超额"></svg>
     </div>
-    <p class="caption">纵轴是从信号日收盘起的累计涨跌幅（%）。横轴是标普 500 交易日。组合是名单等权。超额 = 组合 − 同期标普。</p>
+    <p class="caption">纵轴是从信号日收盘起的累计涨跌幅（%）。横轴是 标普 500 交易日。组合是名单等权。超额 = 组合 − 同期 标普 500。</p>
     <div class="table-wrap">
       <table id="path"></table>
     </div>
@@ -360,7 +360,7 @@ function excessSeries() {
       data: book.path.map((row) => ({
         x: row.hold,
         y: row.excess,
-        label: book.date + " 持有 " + row.hold + " 日 超额 " + pct(row.excess) + "，组合 " + pct(row.port) + "，标普 " + pct(row.bench),
+        label: book.date + " 持有 " + row.hold + " 日 超额 " + pct(row.excess) + "，组合 " + pct(row.port) + "，标普 500 " + pct(row.bench),
       })),
     });
   });
@@ -464,7 +464,7 @@ function renderDetail() {
   const xmax = Math.max(xMax(), book.held || 0);
   draw(svg, [
     { name: "组合", color: "#1d4e7a", width: 2.4, data: book.path.map((row) => ({ x: row.hold, y: row.port, label: "持有 " + row.hold + " 日 组合 " + pct(row.port) })) },
-    { name: "标普 500", color: "#8a8176", width: 2, data: book.path.map((row) => ({ x: row.hold, y: row.bench, label: "持有 " + row.hold + " 日 标普 " + pct(row.bench) })) },
+    { name: "标普 500", color: "#8a8176", width: 2, data: book.path.map((row) => ({ x: row.hold, y: row.bench, label: "持有 " + row.hold + " 日 标普 500 " + pct(row.bench) })) },
     { name: "超额", color: "#9c2f2a", width: 1.6, data: book.path.map((row) => ({ x: row.hold, y: row.excess, label: "持有 " + row.hold + " 日 超额 " + pct(row.excess) })) },
   ], xmax, false);
   const symbols = book.picks.map((pick) => pick.symbol);

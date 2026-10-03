@@ -15,7 +15,7 @@ os.environ.setdefault("EXTREME_QUANT_CN_SINA", "1")
 
 from data import store  # noqa: E402
 from data.download import _fetch_and_write_job, download_benchmark, download_universe  # noqa: E402
-from config.settings import DOWNLOAD_START_DATE  # noqa: E402
+from config.settings import DOWNLOAD_START_DATE, MARKETS  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("batch_download")
@@ -27,7 +27,7 @@ def _pending(market: str, start: str, end: str) -> list[tuple]:
     jobs = []
     for _, row in universe.iterrows():
         symbol = row["symbol"]
-        if store.bar_path(market, symbol).exists():
+        if store.has_bars(market, symbol):
             continue
         jobs.append((market, symbol, str(row["raw_symbol"]), start, end))
     return jobs
@@ -56,7 +56,7 @@ def _run_batch(jobs: list[tuple], workers: int) -> tuple[int, int]:
 def main() -> None:
     from datetime import datetime
 
-    markets = sys.argv[1:] or ["cn", "hk", "us"]
+    markets = sys.argv[1:] or list(MARKETS)
     start = DOWNLOAD_START_DATE
     end = datetime.utcnow().strftime("%Y%m%d")
     workers = int(os.environ.get("EQ_WORKERS", "6"))

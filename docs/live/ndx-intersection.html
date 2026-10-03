@@ -1,16 +1,9 @@
-"""Self-contained performance page for the US intersection ledger."""
-from __future__ import annotations
-
-import json
-
-from eval.recommendation_log import page_data
-
-_TEMPLATE = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>__PAGE_TITLE__</title>
+<title>纳斯达克交集推荐</title>
 <style>
   :root {
     --paper: #f4f0e6;
@@ -111,8 +104,8 @@ _TEMPLATE = """<!DOCTYPE html>
 <body>
 <main>
   <header>
-    <p class="kicker">__KICKER__</p>
-    <h1>推荐相对 __BENCH__ 走到了哪</h1>
+    <p class="kicker">纳斯达克 100 · 5 日模型 ∩ 10 日模型 · 各取前 5</p>
+    <h1>推荐相对 纳斯达克 100 走到了哪</h1>
     <p class="lede" id="lede"></p>
   </header>
   <section>
@@ -148,15 +141,15 @@ _TEMPLATE = """<!DOCTYPE html>
     <h2 id="detail-title"></h2>
     <p class="meta" id="detail-meta"></p>
     <div class="plot">
-      <svg id="pair" role="img" aria-label="选中推荐的组合、__BENCH__ 和超额"></svg>
+      <svg id="pair" role="img" aria-label="选中推荐的组合、纳斯达克 100 和超额"></svg>
     </div>
-    <p class="caption">纵轴是从信号日收盘起的累计涨跌幅（%）。横轴是 __BENCH__ 交易日。组合是名单等权。超额 = 组合 − 同期 __BENCH__。</p>
+    <p class="caption">纵轴是从信号日收盘起的累计涨跌幅（%）。横轴是 纳斯达克 100 交易日。组合是名单等权。超额 = 组合 − 同期 纳斯达克 100。</p>
     <div class="table-wrap">
       <table id="path"></table>
     </div>
   </section>
 </main>
-<script id="data" type="application/json">__DATA__</script>
+<script id="data" type="application/json">{"as_of":"2026-10-02","books":[{"date":"2026-10-02","note":"","flat":false,"held":0,"picks":[{"symbol":"INTC","name":"Intel","entry":119.33,"score5":0.075584,"score10":0.2382}],"horizons":{"5":{"status":"未到期"},"10":{"status":"未到期"},"20":{"status":"未到期"}},"path":[{"date":"2026-10-02","hold":0,"port":0.0,"bench":0.0,"excess":0.0,"names":{"INTC":0.0}}]}]}</script>
 <script>
 const data = JSON.parse(document.getElementById("data").textContent);
 const books = data.books;
@@ -367,7 +360,7 @@ function excessSeries() {
       data: book.path.map((row) => ({
         x: row.hold,
         y: row.excess,
-        label: book.date + " 持有 " + row.hold + " 日 超额 " + pct(row.excess) + "，组合 " + pct(row.port) + "，__BENCH__ " + pct(row.bench),
+        label: book.date + " 持有 " + row.hold + " 日 超额 " + pct(row.excess) + "，组合 " + pct(row.port) + "，纳斯达克 100 " + pct(row.bench),
       })),
     });
   });
@@ -471,11 +464,11 @@ function renderDetail() {
   const xmax = Math.max(xMax(), book.held || 0);
   draw(svg, [
     { name: "组合", color: "#1d4e7a", width: 2.4, data: book.path.map((row) => ({ x: row.hold, y: row.port, label: "持有 " + row.hold + " 日 组合 " + pct(row.port) })) },
-    { name: "__BENCH__", color: "#8a8176", width: 2, data: book.path.map((row) => ({ x: row.hold, y: row.bench, label: "持有 " + row.hold + " 日 __BENCH__ " + pct(row.bench) })) },
+    { name: "纳斯达克 100", color: "#8a8176", width: 2, data: book.path.map((row) => ({ x: row.hold, y: row.bench, label: "持有 " + row.hold + " 日 纳斯达克 100 " + pct(row.bench) })) },
     { name: "超额", color: "#9c2f2a", width: 1.6, data: book.path.map((row) => ({ x: row.hold, y: row.excess, label: "持有 " + row.hold + " 日 超额 " + pct(row.excess) })) },
   ], xmax, false);
   const symbols = book.picks.map((pick) => pick.symbol);
-  const head = ["日期", "持有"].concat(symbols, ["组合", "__BENCH__", "超额"]);
+  const head = ["日期", "持有"].concat(symbols, ["组合", "纳斯达克 100", "超额"]);
   table.replaceChildren();
   const thead = document.createElement("thead");
   const hr = document.createElement("tr");
@@ -521,25 +514,3 @@ window.addEventListener("resize", () => {
 </script>
 </body>
 </html>
-"""
-
-
-def render_html(
-    signals: list[dict],
-    paths: dict,
-    names: dict[str, str],
-    entries: dict[str, dict[str, float]],
-    *,
-    page_title: str = "美股交集推荐",
-    kicker: str = "美股 · 5 日模型 ∩ 10 日模型 · 各取前 5",
-    bench: str = "标普 500",
-) -> str:
-    payload = page_data(signals, paths, names, entries)
-    blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-    blob = blob.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
-    page = (
-        _TEMPLATE.replace("__PAGE_TITLE__", page_title)
-        .replace("__KICKER__", kicker)
-        .replace("__BENCH__", bench)
-    )
-    return page.replace("__DATA__", blob)

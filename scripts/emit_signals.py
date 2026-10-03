@@ -54,7 +54,9 @@ def score_market(model, market: str, trade_date: str, device: str, top_n: int) -
     mid = MARKET_TO_ID[market]
     batch_x, batch_sym = [], []
     for sym in tqdm(symbols, desc=f"signal-{market}"):
-        path = store.labeled_path(market, sym) if sym in labeled else store.bar_path(market, sym)
+        path = store.labeled_path(market, sym) if sym in labeled else store.resolve_bar_path(market, sym)
+        if path is None:
+            continue
         df = store.read_parquet(path)
         if df is None or df.empty:
             continue

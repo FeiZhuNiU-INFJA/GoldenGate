@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from config.device import get_device
-from config.settings import DIR_CHECKPOINTS, DIR_REPORTS, MARKETS, SCORE_WEIGHT_5D, SCORE_WEIGHT_20D
+from config.settings import DIR_CHECKPOINTS, DIR_REPORTS, ID_TO_MARKET, MARKETS, SCORE_WEIGHT_5D, SCORE_WEIGHT_20D
 from eval.baselines import always_neutral, momentum_from_features
 from eval.backtest import run_topn_backtest, summarize_backtest
 from eval.metrics import summarize_predictions
@@ -119,9 +119,8 @@ def main() -> None:
 
     # Build weekly score maps per market for rough backtest on this split's dates
     by_market_date: dict[str, dict[pd.Timestamp, dict[str, float]]] = {m: defaultdict(dict) for m in MARKETS}
-    id_to_market = {0: "cn", 1: "hk", 2: "us"}
     for (mid, symbol, date), score in zip(out["metas"], out["scores"]):
-        market = id_to_market[mid]
+        market = ID_TO_MARKET[mid]
         dt = pd.Timestamp(date)
         # keep Friday-ish: use all dates; rebalance filter weekly
         by_market_date[market][dt][symbol] = float(score)

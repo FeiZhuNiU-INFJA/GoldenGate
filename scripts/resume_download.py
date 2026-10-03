@@ -27,9 +27,7 @@ def _coverage(market: str) -> tuple[int, int, int]:
     universe = store.read_universe(market)
     if universe is None:
         return 0, 0, 0
-    have = {p.stem for p in store.bars_dir(market).glob("*.parquet")} if store.bars_dir(market).exists() else set()
-    # Keep only symbols in universe
-    n_have = sum(1 for s in universe["symbol"] if s in have)
+    n_have = sum(1 for s in universe["symbol"] if store.has_bars(market, s))
     n_uni = len(universe)
     return n_have, n_uni - n_have, n_uni
 
@@ -39,7 +37,7 @@ def main() -> None:
     p.add_argument("--markets", nargs="+", default=list(MARKETS))
     p.add_argument("--workers", type=int, default=DOWNLOAD_WORKERS)
     p.add_argument("--rounds", type=int, default=8, help="max resume rounds")
-    p.add_argument("--refresh-universe", action="store_true", help="refetch HK/US/CN universe files")
+    p.add_argument("--refresh-universe", action="store_true", help="refetch universe files")
     args = p.parse_args()
 
     if args.refresh_universe:

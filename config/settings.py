@@ -12,8 +12,8 @@ DIR_DATASET.mkdir(exist_ok=True, parents=True)
 DIR_CHECKPOINTS.mkdir(exist_ok=True, parents=True)
 DIR_REPORTS.mkdir(exist_ok=True, parents=True)
 
-MARKETS = ("cn", "hk", "us")
-MARKET_TO_ID = {"cn": 0, "hk": 1, "us": 2}
+MARKETS = ("cn", "hk", "us", "ndx")
+MARKET_TO_ID = {"cn": 0, "hk": 1, "us": 2, "ndx": 3}
 ID_TO_MARKET = {v: k for k, v in MARKET_TO_ID.items()}
 
 # Unified feature columns available across markets (Akshare).
@@ -39,6 +39,7 @@ BENCHMARKS = {
     "cn": "000300",  # CSI 300
     "hk": "HSI",     # Hang Seng
     "us": ".INX",    # S&P 500 (Akshare/Eastmoney style; may be remapped in client)
+    "ndx": ".NDX",   # Nasdaq-100
 }
 
 # Sequence / model defaults

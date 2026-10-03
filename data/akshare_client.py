@@ -496,20 +496,29 @@ def fetch_us_benchmark(start_date: str, end_date: str) -> pd.DataFrame:
     return out[(out["trade_date"] >= start) & (out["trade_date"] <= end)].reset_index(drop=True)
 
 
+def _ndx_fetch(name: str):
+    from data import market_client
+
+    return getattr(market_client, name)
+
+
 FETCH_BARS = {
     "cn": fetch_cn_bars,
     "hk": fetch_hk_bars,
     "us": fetch_us_bars,
+    "ndx": lambda *args, **kwargs: _ndx_fetch("fetch_ndx_bars")(*args, **kwargs),
 }
 
 FETCH_UNIVERSE = {
     "cn": fetch_cn_universe,
     "hk": fetch_hk_universe,
     "us": fetch_us_universe,
+    "ndx": lambda *args, **kwargs: _ndx_fetch("fetch_ndx_universe")(*args, **kwargs),
 }
 
 FETCH_BENCHMARK = {
     "cn": fetch_cn_benchmark,
     "hk": fetch_hk_benchmark,
     "us": fetch_us_benchmark,
+    "ndx": lambda *args, **kwargs: _ndx_fetch("fetch_ndx_benchmark")(*args, **kwargs),
 }

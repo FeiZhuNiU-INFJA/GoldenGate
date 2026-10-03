@@ -166,10 +166,34 @@ def train(cfg: TrainConfig | None = None) -> Path:
     return best_path
 
 
+def fit_checkpoint_state(model: MultiMarketModel, state: dict) -> MultiMarketModel:
+    """Load a checkpoint saved before a market was added.
+
+    The market embedding is expanded in place. Heads that are absent from the
+    checkpoint keep their initial weights.
+    """
+    state = dict(state)
+    key = "market_emb.weight"
+    current = model.market_emb.weight
+    if key in state and tuple(state[key].shape) != tuple(current.shape):
+        resized = current.detach().cpu().clone()
+        old = state[key].detach().cpu()
+        rows = min(old.shape[0], resized.shape[0])
+        cols = min(old.shape[1], resized.shape[1])
+        resized[:rows, :cols] = old[:rows, :cols]
+        state[key] = resized
+    missing, unexpected = model.load_state_dict(state, strict=False)
+    if missing:
+        logger.warning("checkpoint has no weights for %s; those heads stay at their initial values", missing)
+    if unexpected:
+        logger.warning("checkpoint has unused keys %s", unexpected)
+    return model
+
+
 def load_model(path: Path | str, device: Optional[str] = None) -> MultiMarketModel:
     device = setup_device(device or get_device())
     ckpt = torch.load(path, map_location=device, weights_only=False)
     model = MultiMarketModel().to(device)
-    model.load_state_dict(ckpt["model"])
+    fit_checkpoint_state(model, ckpt["model"])
     model.eval()
     return model

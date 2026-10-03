@@ -69,7 +69,8 @@ def label_market(market: str, force: bool = False, max_symbols: Optional[int] = 
         if out_path.exists() and not force:
             skipped += 1
             continue
-        bars = store.read_parquet(store.bar_path(market, sym))
+        path = store.resolve_bar_path(market, sym)
+        bars = store.read_parquet(path) if path is not None else None
         if bars is None or bars.empty:
             fail += 1
             continue

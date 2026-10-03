@@ -361,8 +361,7 @@ def download_market(
     ok, fail, skipped = 0, 0, 0
     for _, row in rows.iterrows():
         symbol = row["symbol"]
-        path = store.bar_path(market, symbol)
-        if path.exists() and not force:
+        if store.has_bars(market, symbol) and not force:
             skipped += 1
             ok += 1
             continue
@@ -480,10 +479,19 @@ def update_market(
     if max_symbols is not None:
         rows = rows.head(max_symbols)
 
-    pending = [
-        (market, row["symbol"], str(row["raw_symbol"]), floor_start, end_date, int(overlap_days))
-        for _, row in rows.iterrows()
-    ]
+    pending = []
+    for _, row in rows.iterrows():
+        symbol = row["symbol"]
+        # Names shared with the S&P 500 are refreshed by the us update.
+        if (
+            market == "ndx"
+            and not store.bar_path(market, symbol).exists()
+            and store.has_bars(market, symbol)
+        ):
+            continue
+        pending.append(
+            (market, symbol, str(row["raw_symbol"]), floor_start, end_date, int(overlap_days))
+        )
     if not pending:
         logger.info("%s: no symbols to update", market)
         return {

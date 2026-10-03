@@ -4,7 +4,7 @@ Guidance for working in this repository.
 
 ## Project Overview
 
-Quantitative trading research system for **CN A-shares (主板/科创/创业), Hang Seng, and S&P 500**. Downloads daily bars via **Akshare**, labels with **5d/20d forward excess returns** vs market benchmarks, trains a **shared Transformer encoder** with **per-market dual classification heads**, and evaluates with classification metrics plus a rough Top-N long/short backtest.
+Quantitative trading research system for **CN A-shares (主板/科创/创业), Hang Seng, S&P 500, and Nasdaq-100**. Downloads daily bars via **Akshare**, labels with **5d/20d forward excess returns** vs market benchmarks, trains a **shared Transformer encoder** with **per-market dual classification heads**, and evaluates with classification metrics plus a rough Top-N long/short backtest.
 
 ## Common Commands
 
@@ -34,7 +34,7 @@ If Eastmoney requests fail with `ProxyError`, unset `http_proxy`/`https_proxy` o
 
 ## Architecture
 
-1. **Download** (`data/download.py`, `data/market_client.py`) → Baostock (CN) + yfinance (HK/US) → `dataset/{market}/bars/*.parquet`, `universe.csv`, `benchmark.parquet`, `calendar.parquet`
+1. **Download** (`data/download.py`, `data/market_client.py`) → Baostock (CN) + yfinance/Sina (HK/US/Nasdaq-100) → `dataset/{market}/bars/*.parquet`, `universe.csv`, `benchmark.parquet`, `calendar.parquet`. Nasdaq-100 names that are also in the S&P 500 share `dataset/us/bars/`.
 2. **Labels** (`labels/excess_return.py`) → `dataset/{market}/labeled/*.parquet` with `y_5d`, `y_20d`
 3. **Train** (`train/dataset.py`, `train/trainer.py`, `models/multi_head.py`) → `checkpoints/best_val_loss.pt`
 4. **Eval / signal** (`scripts/evaluate.py`, `scripts/emit_signals.py`)

@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import logging
 import os
+import subprocess
 import threading
 import time
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
@@ -735,20 +737,82 @@ def fetch_us_benchmark(start_date: str, end_date: str) -> pd.DataFrame:
     return out[(out["trade_date"] >= start) & (out["trade_date"] <= end)].reset_index(drop=True)
 
 
+_NDX_LIST_HTML = Path("/tmp/ndx_list.html")
+_NDX_WIKI = "https://en.wikipedia.org/wiki/List_of_NASDAQ-100_companies"
+
+
+def fetch_ndx_universe() -> pd.DataFrame:
+    """Current Nasdaq-100 constituents from the Wikipedia list."""
+    if not _NDX_LIST_HTML.exists() or _NDX_LIST_HTML.stat().st_size < 1000:
+        subprocess.run(
+            ["curl", "-fsSL", "-A", "Mozilla/5.0", "-o", str(_NDX_LIST_HTML), _NDX_WIKI],
+            check=True,
+        )
+    table = pd.read_html(_NDX_LIST_HTML)[0]
+    raw = table["Ticker"].astype(str).str.strip().str.upper().str.replace(".", "-", regex=False)
+    frame = pd.DataFrame(
+        {
+            "symbol": raw.map(lambda ticker: f"{ticker}.US"),
+            "name": table["Company"].astype(str),
+            "market": "ndx",
+            "raw_symbol": raw,
+        }
+    )
+    return frame.drop_duplicates("symbol").reset_index(drop=True)
+
+
+def fetch_ndx_bars(raw_symbol: str, symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
+    df = fetch_us_bars(raw_symbol, symbol, start_date, end_date)
+    if df is None or df.empty:
+        return df
+    df = df.copy()
+    df["market"] = "ndx"
+    return df
+
+
+def fetch_ndx_benchmark(start_date: str, end_date: str) -> pd.DataFrame:
+    import akshare as ak
+
+    df = _with_akshare(ak.index_us_stock_sina, symbol=".NDX")
+    if df is None or df.empty:
+        raise RuntimeError("empty Nasdaq-100 from sina")
+    out = df.rename(
+        columns={
+            "date": "trade_date",
+            "open": "open",
+            "high": "high",
+            "low": "low",
+            "close": "close",
+            "volume": "volume",
+            "amount": "amount",
+        }
+    )
+    if "amount" not in out.columns:
+        out["amount"] = 0.0
+    out["symbol"] = "NDX.US"
+    out["market"] = "ndx"
+    out = normalize_bars(out)
+    start, end = pd.Timestamp(_to_iso(start_date)), pd.Timestamp(_to_iso(end_date))
+    return out[(out["trade_date"] >= start) & (out["trade_date"] <= end)].reset_index(drop=True)
+
+
 FETCH_UNIVERSE = {
     "cn": fetch_cn_universe,
     "hk": fetch_hk_universe,
     "us": fetch_us_universe,
+    "ndx": fetch_ndx_universe,
 }
 
 FETCH_BARS = {
     "cn": fetch_cn_bars,
     "hk": fetch_hk_bars,
     "us": fetch_us_bars,
+    "ndx": fetch_ndx_bars,
 }
 
 FETCH_BENCHMARK = {
     "cn": fetch_cn_benchmark,
     "hk": fetch_hk_benchmark,
     "us": fetch_us_benchmark,
+    "ndx": fetch_ndx_benchmark,
 }

@@ -46,6 +46,26 @@ def bar_path(market: str, symbol: str) -> Path:
     return bars_dir(market) / f"{safe}.parquet"
 
 
+def resolve_bar_path(market: str, symbol: str) -> Optional[Path]:
+    """Path of the daily bars for a symbol.
+
+    Nasdaq-100 names that are also in the S&P 500 keep a single file under
+    ``dataset/us/bars``. The Nasdaq download does not write a second copy.
+    """
+    path = bar_path(market, symbol)
+    if path.exists():
+        return path
+    if market == "ndx":
+        shared = DIR_DATASET / "us" / "bars" / f"{symbol.replace('/', '_')}.parquet"
+        if shared.exists():
+            return shared
+    return None
+
+
+def has_bars(market: str, symbol: str) -> bool:
+    return resolve_bar_path(market, symbol) is not None
+
+
 def labeled_path(market: str, symbol: str) -> Path:
     safe = symbol.replace("/", "_")
     return labeled_dir(market) / f"{safe}.parquet"
@@ -76,8 +96,14 @@ def read_universe(market: str) -> Optional[pd.DataFrame]:
 
 
 def list_bar_symbols(market: str) -> list[str]:
-    paths = sorted(bars_dir(market).glob("*.parquet"))
-    return [p.stem for p in paths]
+    names = {p.stem for p in bars_dir(market).glob("*.parquet")}
+    if market == "ndx":
+        universe = read_universe(market)
+        if universe is not None:
+            for symbol in universe["symbol"].astype(str):
+                if has_bars(market, symbol):
+                    names.add(symbol)
+    return sorted(names)
 
 
 def list_labeled_symbols(market: str) -> list[str]:

@@ -42,6 +42,48 @@ def test_cross_section_ranks_winners_higher():
     assert abs(out["z"].mean()) < 1e-8
 
 
+def test_top_grade_is_the_best_ten_names():
+    rows = [
+        {"market": "us", "trade_date": "2024-01-02", "symbol": f"S{i:02d}", "exret_5d": i / 100}
+        for i in range(40)
+    ]
+    out = assign_cross_section(pd.DataFrame(rows), value_col="exret_5d", min_names=20, top_names=10)
+    by_sym = out.set_index("symbol")
+    assert set(by_sym.loc[[f"S{i:02d}" for i in range(30, 40)], "relevance"]) == {4}
+    assert by_sym.loc["S29", "relevance"] == 3
+    assert by_sym.loc["S00", "relevance"] == 0
+    assert (out["relevance"] == 4).sum() == 10
+
+
+def test_three_grades_are_top_ten_next_ten_and_the_rest():
+    rows = [
+        {"market": "us", "trade_date": "2024-01-02", "symbol": f"S{i:02d}", "exret_5d": i / 100}
+        for i in range(40)
+    ]
+    out = assign_cross_section(
+        pd.DataFrame(rows), value_col="exret_5d", min_names=20, grade_cuts=(10, 20)
+    )
+    by_sym = out.set_index("symbol")
+    assert set(by_sym.loc[[f"S{i:02d}" for i in range(30, 40)], "relevance"]) == {2}
+    assert set(by_sym.loc[[f"S{i:02d}" for i in range(20, 30)], "relevance"]) == {1}
+    assert set(by_sym.loc[[f"S{i:02d}" for i in range(0, 20)], "relevance"]) == {0}
+
+
+def test_ties_at_the_cutoff_stay_in_the_top_grade():
+    rows = [
+        {
+            "market": "hk",
+            "trade_date": "2024-01-02",
+            "symbol": f"T{i:02d}",
+            "exret_5d": 1.0 if i < 12 else -float(i),
+        }
+        for i in range(30)
+    ]
+    out = assign_cross_section(pd.DataFrame(rows), value_col="exret_5d", min_names=20, top_names=10)
+    assert (out.loc[out["exret_5d"] == 1.0, "relevance"] == 4).all()
+    assert int((out["relevance"] == 4).sum()) == 12
+
+
 def test_features_use_only_past_closes():
     raw = _bars()
     feat = features_from_labeled(raw, horizon=20)
