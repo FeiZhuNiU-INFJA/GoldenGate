@@ -22,7 +22,7 @@ _TEMPLATE = """<!DOCTYPE html>
     --book: #1d4e7a;
     --bench: #8a8176;
     --mean: #1c1915;
-    --select: #e4efe4;
+    --select: #efe4d4;
   }
   * { box-sizing: border-box; }
   body {
@@ -47,8 +47,25 @@ _TEMPLATE = """<!DOCTYPE html>
   }
   h1 { margin: 0 0 8px; font-size: 32px; letter-spacing: -0.03em; line-height: 1.15; }
   h2 { margin: 0 0 12px; font-size: 18px; }
-  .lede { margin: 0; max-width: 62ch; color: var(--muted); }
-  section { margin-top: 36px; }
+  .lede, .note { margin: 0; max-width: 66ch; color: var(--muted); }
+  .status { margin: 8px 0 0; }
+  section { margin-top: 40px; }
+  .eyebrow {
+    margin: 0 0 4px;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+  }
+  #detail {
+    margin-top: 28px;
+    padding-top: 22px;
+    border-top: 2px solid var(--ink);
+  }
+  #detail.settle { animation: settle 320ms ease; }
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
   .means {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -67,6 +84,7 @@ _TEMPLATE = """<!DOCTYPE html>
   svg { width: 100%; height: 300px; display: block; overflow: visible; }
   .caption { margin: 8px 0 0; color: var(--muted); font-size: 12px; max-width: 78ch; }
   .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .legend li { display: inline-flex; align-items: center; gap: 6px; }
   .legend button, .books button {
     border: 0;
     background: transparent;
@@ -84,8 +102,11 @@ _TEMPLATE = """<!DOCTYPE html>
   th, td { padding: 7px 10px 7px 0; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--rule); }
   th:first-child, td:first-child, th.left, td.left { text-align: left; }
   th { color: var(--muted); font-size: 12px; font-weight: 500; }
-  tr[aria-selected="true"] { background: var(--select); }
-  tbody tr { cursor: pointer; }
+  #books tr[aria-selected="true"] { background: var(--select); box-shadow: inset 3px 0 0 var(--ink); }
+  #books tbody tr { cursor: pointer; }
+  #books tbody tr:hover { background: #f7f1e6; }
+  #books tr[aria-selected="true"]:hover { background: var(--select); }
+  #books tbody tr:focus-visible { outline: 2px solid var(--book); outline-offset: -2px; }
   .tip {
     position: absolute;
     z-index: 2;
@@ -96,7 +117,27 @@ _TEMPLATE = """<!DOCTYPE html>
     pointer-events: none;
     white-space: nowrap;
   }
-  .meta { margin: 0 0 8px; }
+  .meta { margin: 8px 0 0; }
+  .note { margin-top: 6px; font-size: 13px; }
+  .others {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    align-items: baseline;
+    margin: 18px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .others button {
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    padding: 0;
+  }
   .switch { display: flex; gap: 8px; margin: 18px 0 0; }
   .switch button {
     border: 1px solid var(--rule);
@@ -114,7 +155,7 @@ _TEMPLATE = """<!DOCTYPE html>
     .means b { font-size: 24px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    svg path { animation: none !important; }
+    svg path, #detail.settle { animation: none !important; }
   }
 </style>
 </head>
@@ -122,23 +163,15 @@ _TEMPLATE = """<!DOCTYPE html>
 <main>
   <header>
     <p class="kicker" id="kicker"></p>
-    <h1>推荐相对 <span id="bench-title"></span> 走到了哪</h1>
+    <h1>各笔推荐，相对 <span id="bench-title"></span></h1>
     <p class="lede" id="lede"></p>
-    <div class="switch" id="markets"></div>
-    <div class="switch" id="horizons"></div>
+    <p class="status" id="status"></p>
+    <div class="switch" id="markets" role="group" aria-label="市场"></div>
+    <div class="switch" id="horizons" role="group" aria-label="模型期限"></div>
   </header>
   <section>
-    <h2>同一持有天数上的平均超额</h2>
-    <div id="means" class="means"></div>
-    <div class="plot">
-      <svg id="excess" role="img" aria-label="各笔推荐的累计超额，横轴为持有天数"></svg>
-      <div id="tip" class="tip" hidden></div>
-    </div>
-    <p class="caption" id="excess-cap"></p>
-    <ul id="legend" class="legend"></ul>
-  </section>
-  <section>
-    <h2>每一笔推荐</h2>
+    <h2>各笔名单</h2>
+    <p class="caption">一行是一个信号日。点一行，下面只展开这一笔。后面的交易日如果名单变了，是另一行。</p>
     <div class="table-wrap">
       <table id="books">
         <thead>
@@ -146,27 +179,43 @@ _TEMPLATE = """<!DOCTYPE html>
             <th class="left">信号日</th>
             <th class="left">名单</th>
             <th>已持有</th>
-            <th>当前超额</th>
-            <th>5 日超额</th>
-            <th>10 日超额</th>
-            <th>20 日超额</th>
+            <th>至今超额</th>
+            <th>满 5 日</th>
+            <th>满 10 日</th>
+            <th>满 20 日</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
+    <p class="caption">已持有按基准的交易日数。至今超额是最新一天。满 5、10、20 日是持有走到那一天的超额，还没走到写未到期。</p>
   </section>
-  <section>
+  <section id="detail">
+    <p class="eyebrow">选中的这一笔</p>
     <h2 id="detail-title"></h2>
     <p class="meta" id="detail-meta"></p>
+    <p class="note" id="detail-note"></p>
     <div class="plot">
-      <svg id="pair" role="img" aria-label="选中推荐的组合、基准和超额"></svg>
+      <svg id="pair" role="img" aria-label="选中这一笔的组合、基准和超额，横轴为持有天数"></svg>
       <div class="tip" hidden></div>
     </div>
+    <ul id="pair-legend" class="legend"></ul>
     <p class="caption" id="pair-cap"></p>
     <div class="table-wrap">
       <table id="path"></table>
     </div>
+    <div id="others" class="others"></div>
+  </section>
+  <section>
+    <h2>走到同一持有天数时</h2>
+    <p class="caption">把每一笔的超额按持有天数对齐。横轴不是日历，10-02 的入场在这里仍是第 0 天。</p>
+    <div id="means" class="means"></div>
+    <div class="plot">
+      <svg id="excess" role="img" aria-label="各笔推荐的累计超额，横轴为持有天数"></svg>
+      <div id="tip" class="tip" hidden></div>
+    </div>
+    <p class="caption" id="excess-cap"></p>
+    <ul id="legend" class="legend"></ul>
   </section>
 </main>
 <script id="data" type="application/json">__DATA__</script>
@@ -319,24 +368,32 @@ function renderLede() {
     ? latest.picks.map((pick) => pick.symbol).join("、")
     : "空仓";
   document.getElementById("lede").textContent =
-    "截至 " + (currentMarket().as_of || "—") + " 收盘。账上 " + books.length + " 笔，其中 " +
+    "每个信号日单独一笔，从那天收盘起持有。后面几天换了名单，是另一笔，不并进这一笔。";
+  document.getElementById("status").textContent =
+    "截至 " + (currentMarket().as_of || "—") + " 收盘。" + horizonKey + " 日模型 " +
     open + " 笔有持仓" + (flat ? "，" + flat + " 笔空仓" : "") +
-    "。最近一笔是 " + (latest ? latest.date + " " + names : "—") +
-    "。平均超额只比较走到同一天的推荐。";
+    "。最近一笔 " + (latest ? latest.date + " " + names : "—") + "。";
 }
 
 function xMax() {
   let hold = 0;
   books.forEach((book) => book.path.forEach((row) => { hold = Math.max(hold, row.hold); }));
-  if (hold <= 5) return 5;
-  if (hold <= 10) return 10;
-  return 20;
+  return Math.max(hold, 1);
+}
+
+function tickDays(xmax) {
+  if (xmax <= 6) {
+    const days = [];
+    for (let day = 0; day <= xmax; day += 1) days.push(day);
+    return days;
+  }
+  return [0, 5, 10, 15, 20].filter((day) => day <= xmax);
 }
 
 function draw(svg, series, xmax, animateMean) {
   const width = Math.max(svg.clientWidth || 640, 320);
   const height = 300;
-  const pad = { l: 56, r: 12, t: 16, b: 32 };
+  const pad = { l: 56, r: 16, t: 16, b: 46 };
   svg.setAttribute("viewBox", "0 0 " + width + " " + height);
   svg.replaceChildren();
   const ys = [0];
@@ -365,14 +422,23 @@ function draw(svg, series, xmax, animateMean) {
   }
   const zero = Y(0);
   svg.append(el("line", { x1: pad.l, x2: width - pad.r, y1: zero, y2: zero, stroke: "#b7ad9f", "stroke-width": 1, "stroke-dasharray": "3 4" }));
-  [0, 5, 10, 15, 20].forEach((day) => {
-    if (day > xmax) return;
+  tickDays(xmax).forEach((day) => {
     const x = X(day);
-    svg.append(el("line", { x1: x, x2: x, y1: pad.t, y2: height - pad.b, stroke: day === 5 || day === 10 || day === 20 ? "#e4dccc" : "transparent" }));
-    const tick = el("text", { x: x, y: height - 10, "text-anchor": "middle", fill: "#6f675e", "font-size": 11 });
+    const mark = day === 5 || day === 10 || day === 20;
+    svg.append(el("line", { x1: x, x2: x, y1: pad.t, y2: height - pad.b, stroke: mark ? "#e4dccc" : "transparent" }));
+    const tick = el("text", { x: x, y: height - 22, "text-anchor": "middle", fill: "#6f675e", "font-size": 11 });
     tick.textContent = String(day);
     svg.append(tick);
   });
+  const axis = el("text", {
+    x: (pad.l + width - pad.r) / 2,
+    y: height - 4,
+    "text-anchor": "middle",
+    fill: "#6f675e",
+    "font-size": 11,
+  });
+  axis.textContent = "持有天数";
+  svg.append(axis);
   const ordered = series.filter((line) => !line.mean).concat(series.filter((line) => line.mean));
   ordered.forEach((line) => {
     if (!line.data.length) return;
@@ -456,10 +522,20 @@ function excessSeries() {
 function renderExcess() {
   const xmax = xMax();
   const lines = excessSeries();
+  const plot = document.getElementById("excess").parentElement;
+  const reached = books.some((book) => (book.held || 0) >= 1);
+  if (!reached) {
+    plot.hidden = true;
+    document.getElementById("legend").replaceChildren();
+    document.getElementById("excess-cap").textContent =
+      "还没有一笔走过入场日。持有满 1 天之后，这里按持有天数把各笔超额叠在一起。";
+    return;
+  }
+  plot.hidden = false;
   draw(document.getElementById("excess"), lines, xmax, true);
   animated = true;
   document.getElementById("excess-cap").textContent =
-    "纵轴是累计超额（%），横轴是持有天数，目前画到 " + xmax + "。粗线是走到同一天的推荐等权平均。细线是每一笔。5、10、20 日还没走到的部分留白。";
+    "纵轴是相对各自信号日收盘的累计超额。细线是每一笔，虚线是已经走到这一天的那些笔的平均。目前最长持有 " + xmax + " 天。";
   const legend = document.getElementById("legend");
   legend.replaceChildren();
   lines.forEach((line) => {
@@ -493,8 +569,23 @@ function renderBooks() {
   body.replaceChildren();
   books.forEach((book) => {
     const tr = document.createElement("tr");
+    tr.tabIndex = 0;
     tr.setAttribute("aria-selected", book.date === selected ? "true" : "false");
-    tr.addEventListener("click", () => { selected = book.date; render(); });
+    const choose = () => {
+      if (book.date === selected) {
+        document.getElementById("detail").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "nearest" });
+        return;
+      }
+      selected = book.date;
+      render();
+      document.getElementById("detail").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "nearest" });
+    };
+    tr.addEventListener("click", choose);
+    tr.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      choose();
+    });
     const cells = [
       book.date,
       bookLabel(book),
@@ -522,24 +613,36 @@ function renderBooks() {
   });
 }
 
-function renderDetail() {
+function renderDetail(animate) {
   const book = books.find((item) => item.date === selected) || books[0];
   const title = document.getElementById("detail-title");
   const meta = document.getElementById("detail-meta");
+  const note = document.getElementById("detail-note");
   const table = document.getElementById("path");
   const svg = document.getElementById("pair");
+  const legend = document.getElementById("pair-legend");
+  const panel = document.getElementById("detail");
+  legend.replaceChildren();
   if (!book) {
     title.textContent = "";
     meta.textContent = "";
+    note.textContent = "";
     svg.replaceChildren();
     table.replaceChildren();
+    renderOthers(null);
     return;
   }
-  title.textContent = book.date + " " + bookLabel(book);
+  title.textContent = book.date + " · " + bookLabel(book);
   if (book.flat) {
-    meta.textContent = "这一天三个模型的前 5 没有交集，不建仓。";
+    meta.textContent = "";
+    note.textContent = "这一天三个模型的前 5 没有交集，不建仓。下面没有逐日涨跌。";
+    document.getElementById("pair-cap").textContent = "";
+    svg.parentElement.hidden = true;
+    legend.hidden = true;
     svg.replaceChildren();
     table.replaceChildren();
+    renderOthers(book);
+    settle(panel, animate);
     return;
   }
   const bits = book.picks.map((pick) => {
@@ -547,20 +650,48 @@ function renderDetail() {
     return pick.symbol + " " + (pick.name || "") + " 入场 " + entry;
   });
   meta.textContent = bits.join(" · ") + (book.note ? " · " + book.note : "");
-  const xmax = Math.max(xMax(), book.held || 0);
-  draw(svg, [
-    { name: "组合", color: "#1d4e7a", width: 2.4, data: book.path.map((row) => ({ x: row.hold, y: row.port, label: "持有 " + row.hold + " 日 组合 " + pct(row.port) })) },
-    { name: benchName(), color: "#8a8176", width: 2, data: book.path.map((row) => ({ x: row.hold, y: row.bench, label: "持有 " + row.hold + " 日 " + benchName() + " " + pct(row.bench) })) },
-    { name: "超额", color: "#9c2f2a", width: 1.6, data: book.path.map((row) => ({ x: row.hold, y: row.excess, label: "持有 " + row.hold + " 日 超额 " + pct(row.excess) })) },
-  ], xmax, false);
+  note.textContent = "下表只含这些名字，从 " + book.date + " 收盘累加。持有 0 是入场当天。后面信号日的不同名单不写进这张表。";
+  const bench = benchName();
+  const plot = svg.parentElement;
+  const quiet = (book.held || 0) < 1;
+  plot.hidden = quiet;
+  legend.hidden = quiet;
+  if (quiet) {
+    document.getElementById("pair-cap").textContent = "还只有入场当天，涨跌都是 0。走过一个交易日之后，这里画出组合、" + bench + " 和超额。";
+    svg.replaceChildren();
+  } else {
+    const xmax = Math.max(book.held || 0, 1);
+    draw(svg, [
+      { name: "组合", color: "#1d4e7a", width: 2.4, data: book.path.map((row) => ({ x: row.hold, y: row.port, label: "持有 " + row.hold + " 日 组合 " + pct(row.port) })) },
+      { name: bench, color: "#8a8176", width: 2, data: book.path.map((row) => ({ x: row.hold, y: row.bench, label: "持有 " + row.hold + " 日 " + bench + " " + pct(row.bench) })) },
+      { name: "超额", color: "#1c1915", width: 1.6, data: book.path.map((row) => ({ x: row.hold, y: row.excess, label: "持有 " + row.hold + " 日 超额 " + pct(row.excess) })) },
+    ], xmax, false);
+    [
+      ["组合", "#1d4e7a"],
+      [bench, "#8a8176"],
+      ["超额", "#1c1915"],
+    ].forEach((item) => {
+      const li = document.createElement("li");
+      const swatch = document.createElement("i");
+      swatch.className = "swatch";
+      swatch.style.background = item[1];
+      const label = document.createElement("span");
+      label.textContent = item[0];
+      li.append(swatch, label);
+      legend.append(li);
+    });
+    document.getElementById("pair-cap").textContent =
+      "组合是名单等权。超额 = 组合 − 同期" + bench + "。都从这一笔的信号日收盘算起。";
+  }
   const symbols = book.picks.map((pick) => pick.symbol);
-  const head = ["日期", "持有"].concat(symbols, ["组合", benchName(), "超额"]);
+  const head = ["日期", "持有"].concat(symbols, ["组合", bench, "超额"]);
   table.replaceChildren();
   const thead = document.createElement("thead");
   const hr = document.createElement("tr");
   head.forEach((label, index) => {
     const th = document.createElement("th");
     if (index === 0) th.className = "left";
+    if (index === 1) th.title = "信号日之后的" + bench + "交易日数，0 是入场当天";
     th.textContent = label;
     hr.append(th);
   });
@@ -568,43 +699,82 @@ function renderDetail() {
   const tbody = document.createElement("tbody");
   book.path.forEach((row) => {
     const tr = document.createElement("tr");
-    const values = [row.date, String(row.hold)].concat(
-      symbols.map((symbol) => pct(row.names[symbol])),
-      [pct(row.port), pct(row.bench), pct(row.excess)]
+    const values = [
+      { text: row.date, tone: "" },
+      { text: String(row.hold), tone: "" },
+    ].concat(
+      symbols.map((symbol) => ({ text: pct(row.names[symbol]), tone: tone(row.names[symbol]) })),
+      [
+        { text: pct(row.port), tone: tone(row.port) },
+        { text: pct(row.bench), tone: tone(row.bench) },
+        { text: pct(row.excess), tone: tone(row.excess) },
+      ]
     );
-    values.forEach((text, index) => {
+    values.forEach((cell, index) => {
       const td = document.createElement("td");
       if (index === 0) td.className = "left";
-      td.textContent = text;
+      else if (cell.tone) td.className = cell.tone;
+      td.textContent = cell.text;
       tr.append(td);
     });
     tbody.append(tr);
   });
   table.append(thead, tbody);
+  renderOthers(book);
+  settle(panel, animate);
 }
+
+function renderOthers(book) {
+  const host = document.getElementById("others");
+  host.replaceChildren();
+  if (!book) return;
+  const rest = books.filter((item) => item.date !== book.date);
+  if (!rest.length) return;
+  const label = document.createElement("span");
+  label.textContent = "换一笔";
+  host.append(label);
+  rest.forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = item.date.slice(5) + " " + bookLabel(item);
+    button.addEventListener("click", () => {
+      selected = item.date;
+      render();
+    });
+    host.append(button);
+  });
+}
+
+function settle(panel, animate) {
+  if (!animate || reduced) return;
+  panel.classList.remove("settle");
+  void panel.offsetWidth;
+  panel.classList.add("settle");
+}
+
+let shown = "";
 
 function render() {
   syncBooks();
   const current = currentMarket();
   document.getElementById("kicker").textContent = current.kicker || "";
   document.getElementById("bench-title").textContent = current.bench;
-  document.getElementById("pair-cap").textContent =
-    "纵轴是从信号日收盘起的累计涨跌幅（%）。横轴是 " + current.bench +
-    " 交易日。组合是名单等权。超额 = 组合 − 同期 " + current.bench + "。";
+  const animate = shown !== "" && shown !== selected;
+  shown = selected;
   renderMarkets();
   renderSwitch();
   renderLede();
+  renderBooks();
+  renderDetail(animate);
   renderMeans();
   renderExcess();
-  renderBooks();
-  renderDetail();
 }
 
 render();
 window.addEventListener("resize", () => {
   draw(document.getElementById("excess"), excessSeries(), xMax(), false);
   const book = books.find((item) => item.date === selected);
-  if (book && !book.flat) renderDetail();
+  if (book && !book.flat) renderDetail(false);
 });
 </script>
 </body>
