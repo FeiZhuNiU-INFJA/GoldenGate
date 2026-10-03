@@ -1,0 +1,646 @@
+"""Self-contained performance page for the US intersection ledger."""
+from __future__ import annotations
+
+import json
+
+from eval.recommendation_log import page_data
+
+_TEMPLATE = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__PAGE_TITLE__</title>
+<style>
+  :root {
+    --paper: #f4f0e6;
+    --ink: #1c1915;
+    --muted: #6f675e;
+    --rule: #d8d0c3;
+    --up: #1b6b43;
+    --down: #9c2f2a;
+    --book: #1d4e7a;
+    --bench: #8a8176;
+    --mean: #1c1915;
+    --select: #e4efe4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  main { max-width: 980px; margin: 0 auto; padding: 36px 28px 72px; }
+  .kicker {
+    margin: 0 0 8px;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  h1, h2, .means b, .num {
+    font-family: "Iowan Old Style", Palatino, "Songti SC", "Source Han Serif SC", serif;
+    font-weight: 500;
+  }
+  h1 { margin: 0 0 8px; font-size: 32px; letter-spacing: -0.03em; line-height: 1.15; }
+  h2 { margin: 0 0 12px; font-size: 18px; }
+  .lede { margin: 0; max-width: 62ch; color: var(--muted); }
+  section { margin-top: 36px; }
+  .means {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin: 0 0 18px;
+    padding: 16px 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .means span { display: block; color: var(--muted); font-size: 12px; }
+  .means b { display: block; margin-top: 4px; font-size: 28px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .means em { display: block; margin-top: 2px; color: var(--muted); font-style: normal; font-size: 12px; }
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .plot { position: relative; }
+  svg { width: 100%; height: 300px; display: block; overflow: visible; }
+  .caption { margin: 8px 0 0; color: var(--muted); font-size: 12px; max-width: 78ch; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .legend button, .books button {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    padding: 0;
+  }
+  .legend button { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 3px; display: inline-block; }
+  .legend button[aria-pressed="true"] { font-weight: 600; }
+  button:focus-visible { outline: 2px solid var(--book); outline-offset: 2px; }
+  .table-wrap { overflow-x: auto; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 10px 7px 0; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--rule); }
+  th:first-child, td:first-child, th.left, td.left { text-align: left; }
+  th { color: var(--muted); font-size: 12px; font-weight: 500; }
+  tr[aria-selected="true"] { background: var(--select); }
+  tbody tr { cursor: pointer; }
+  .tip {
+    position: absolute;
+    z-index: 2;
+    padding: 4px 8px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 12px;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .meta { margin: 0 0 8px; }
+  .switch { display: flex; gap: 8px; margin: 18px 0 0; }
+  .switch button {
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  .switch button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  @media (max-width: 720px) {
+    main { padding: 24px 16px 48px; }
+    h1 { font-size: 26px; }
+    .means { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .means b { font-size: 24px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    svg path { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="kicker" id="kicker"></p>
+    <h1>推荐相对 <span id="bench-title"></span> 走到了哪</h1>
+    <p class="lede" id="lede"></p>
+    <div class="switch" id="markets"></div>
+    <div class="switch" id="horizons"></div>
+  </header>
+  <section>
+    <h2>同一持有天数上的平均超额</h2>
+    <div id="means" class="means"></div>
+    <div class="plot">
+      <svg id="excess" role="img" aria-label="各笔推荐的累计超额，横轴为持有天数"></svg>
+      <div id="tip" class="tip" hidden></div>
+    </div>
+    <p class="caption" id="excess-cap"></p>
+    <ul id="legend" class="legend"></ul>
+  </section>
+  <section>
+    <h2>每一笔推荐</h2>
+    <div class="table-wrap">
+      <table id="books">
+        <thead>
+          <tr>
+            <th class="left">信号日</th>
+            <th class="left">名单</th>
+            <th>已持有</th>
+            <th>当前超额</th>
+            <th>5 日超额</th>
+            <th>10 日超额</th>
+            <th>20 日超额</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <h2 id="detail-title"></h2>
+    <p class="meta" id="detail-meta"></p>
+    <div class="plot">
+      <svg id="pair" role="img" aria-label="选中推荐的组合、基准和超额"></svg>
+      <div class="tip" hidden></div>
+    </div>
+    <p class="caption" id="pair-cap"></p>
+    <div class="table-wrap">
+      <table id="path"></table>
+    </div>
+  </section>
+</main>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const payload = JSON.parse(document.getElementById("data").textContent);
+const markets = payload.markets;
+let marketKey = markets[0].key;
+let horizonKey = "5";
+let groups = {};
+let books = [];
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function currentMarket() {
+  return markets.find((item) => item.key === marketKey) || markets[0];
+}
+
+function benchName() {
+  return currentMarket().bench;
+}
+
+function syncBooks() {
+  const current = currentMarket();
+  groups = current.groups || {};
+  const horizons = (current.horizons || [5]).map(String);
+  if (!horizons.includes(horizonKey)) horizonKey = horizons[0];
+  books = groups[horizonKey] || [];
+}
+
+syncBooks();
+let selected = pickDefault();
+let animated = false;
+
+function renderMarkets() {
+  const host = document.getElementById("markets");
+  host.replaceChildren();
+  markets.forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = item.label;
+    button.setAttribute("aria-pressed", item.key === marketKey ? "true" : "false");
+    button.addEventListener("click", () => {
+      if (item.key === marketKey) return;
+      marketKey = item.key;
+      syncBooks();
+      selected = pickDefault();
+      animated = false;
+      render();
+    });
+    host.append(button);
+  });
+}
+
+function renderSwitch() {
+  const host = document.getElementById("horizons");
+  host.replaceChildren();
+  (currentMarket().horizons || [5, 10, 20]).forEach((horizon) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    const key = String(horizon);
+    button.textContent = horizon + " 日模型";
+    button.setAttribute("aria-pressed", key === horizonKey ? "true" : "false");
+    button.addEventListener("click", () => {
+      if (key === horizonKey) return;
+      horizonKey = key;
+      books = groups[horizonKey] || [];
+      selected = pickDefault();
+      animated = false;
+      render();
+    });
+    host.append(button);
+  });
+}
+
+function pickDefault() {
+  const live = books.filter((book) => !book.flat && book.path.length);
+  if (!live.length) return books[0] ? books[0].date : "";
+  live.sort((a, b) => (b.held - a.held) || (a.date < b.date ? 1 : -1));
+  return live[0].date;
+}
+
+function pct(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  const text = (Math.abs(value) * 100).toFixed(2) + "%";
+  if (value > 0) return "+" + text;
+  if (value < 0) return "−" + text;
+  return "+" + text;
+}
+
+function tone(value) {
+  if (value > 0) return "up";
+  if (value < 0) return "down";
+  return "";
+}
+
+function rowAt(book, hold) {
+  return book.path.find((row) => row.hold === hold) || null;
+}
+
+function meanAt(hold) {
+  const values = [];
+  books.forEach((book) => {
+    if (book.flat) return;
+    const row = rowAt(book, hold);
+    if (row) values.push(row.excess);
+  });
+  if (!values.length) return null;
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+  return { mean, n: values.length };
+}
+
+function lastExcess(book) {
+  if (book.flat || !book.path.length) return null;
+  return book.path[book.path.length - 1].excess;
+}
+
+function horizonExcess(book, hold) {
+  const cell = book.horizons[String(hold)];
+  if (!cell || cell.status !== "到期") return null;
+  return cell.excess;
+}
+
+function renderMeans() {
+  const host = document.getElementById("means");
+  host.replaceChildren();
+  [1, 5, 10, 20].forEach((hold) => {
+    const stat = meanAt(hold);
+    const wrap = document.createElement("div");
+    const label = document.createElement("span");
+    label.textContent = "持有 " + hold + " 日";
+    const value = document.createElement("b");
+    const note = document.createElement("em");
+    if (!stat) {
+      value.textContent = "未到期";
+      note.textContent = "还没有推荐走到这一天";
+    } else {
+      value.textContent = pct(stat.mean);
+      value.className = tone(stat.mean);
+      note.textContent = stat.n + " 笔等权";
+    }
+    wrap.append(label, value, note);
+    host.append(wrap);
+  });
+}
+
+function renderLede() {
+  const open = books.filter((book) => !book.flat).length;
+  const flat = books.length - open;
+  const latest = books[books.length - 1];
+  const names = latest && !latest.flat
+    ? latest.picks.map((pick) => pick.symbol).join("、")
+    : "空仓";
+  document.getElementById("lede").textContent =
+    "截至 " + (currentMarket().as_of || "—") + " 收盘。账上 " + books.length + " 笔，其中 " +
+    open + " 笔有持仓" + (flat ? "，" + flat + " 笔空仓" : "") +
+    "。最近一笔是 " + (latest ? latest.date + " " + names : "—") +
+    "。平均超额只比较走到同一天的推荐。";
+}
+
+function xMax() {
+  let hold = 0;
+  books.forEach((book) => book.path.forEach((row) => { hold = Math.max(hold, row.hold); }));
+  if (hold <= 5) return 5;
+  if (hold <= 10) return 10;
+  return 20;
+}
+
+function draw(svg, series, xmax, animateMean) {
+  const width = Math.max(svg.clientWidth || 640, 320);
+  const height = 300;
+  const pad = { l: 56, r: 12, t: 16, b: 32 };
+  svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+  svg.replaceChildren();
+  const ys = [0];
+  series.forEach((line) => line.data.forEach((point) => ys.push(point.y)));
+  let min = Math.min.apply(null, ys);
+  let max = Math.max.apply(null, ys);
+  if (min === max) { min -= 0.01; max += 0.01; }
+  const span = max - min;
+  min -= span * 0.15;
+  max += span * 0.12;
+  const X = (value) => pad.l + (value / xmax) * (width - pad.l - pad.r);
+  const Y = (value) => pad.t + (max - value) / (max - min) * (height - pad.t - pad.b);
+  const ns = "http://www.w3.org/2000/svg";
+  function el(name, attrs) {
+    const node = document.createElementNS(ns, name);
+    Object.keys(attrs).forEach((key) => node.setAttribute(key, attrs[key]));
+    return node;
+  }
+  for (let i = 0; i < 4; i += 1) {
+    const value = min + (max - min) * i / 3;
+    const y = Y(value);
+    svg.append(el("line", { x1: pad.l, x2: width - pad.r, y1: y, y2: y, stroke: "#d8d0c3", "stroke-width": 1 }));
+    const tick = el("text", { x: pad.l - 8, y: y + 4, "text-anchor": "end", fill: "#6f675e", "font-size": 11 });
+    tick.textContent = pct(value);
+    svg.append(tick);
+  }
+  const zero = Y(0);
+  svg.append(el("line", { x1: pad.l, x2: width - pad.r, y1: zero, y2: zero, stroke: "#b7ad9f", "stroke-width": 1, "stroke-dasharray": "3 4" }));
+  [0, 5, 10, 15, 20].forEach((day) => {
+    if (day > xmax) return;
+    const x = X(day);
+    svg.append(el("line", { x1: x, x2: x, y1: pad.t, y2: height - pad.b, stroke: day === 5 || day === 10 || day === 20 ? "#e4dccc" : "transparent" }));
+    const tick = el("text", { x: x, y: height - 10, "text-anchor": "middle", fill: "#6f675e", "font-size": 11 });
+    tick.textContent = String(day);
+    svg.append(tick);
+  });
+  const ordered = series.filter((line) => !line.mean).concat(series.filter((line) => line.mean));
+  ordered.forEach((line) => {
+    if (!line.data.length) return;
+    const d = line.data.map((point, index) => (index ? "L" : "M") + X(point.x).toFixed(1) + " " + Y(point.y).toFixed(1)).join(" ");
+    const path = el("path", {
+      d: d,
+      fill: "none",
+      stroke: line.color,
+      "stroke-width": line.width,
+      "stroke-linejoin": "round",
+      "stroke-linecap": "round",
+    });
+    if (line.mean) path.setAttribute("stroke-dasharray", "7 5");
+    svg.append(path);
+    if (animateMean && line.mean && !reduced && !animated && line.data.length > 1) {
+      path.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, easing: "ease-out", fill: "forwards" });
+    }
+    line.data.forEach((point) => {
+      const dot = el("circle", { cx: X(point.x), cy: Y(point.y), r: line.mean ? 3.5 : 3, fill: line.color });
+      dot.addEventListener("mouseenter", (event) => showTip(event, point.label));
+      dot.addEventListener("mouseleave", hideTip);
+      if (line.date) {
+        dot.style.cursor = "pointer";
+        dot.addEventListener("click", () => { selected = line.date; render(); });
+      }
+      svg.append(dot);
+    });
+  });
+}
+
+function showTip(event, text) {
+  const plot = event.currentTarget.ownerSVGElement.parentElement;
+  const tip = plot.querySelector(".tip");
+  document.querySelectorAll(".tip").forEach((node) => { node.hidden = node !== tip; });
+  const rect = plot.getBoundingClientRect();
+  tip.hidden = false;
+  tip.textContent = text;
+  tip.style.left = (event.clientX - rect.left + 10) + "px";
+  tip.style.top = (event.clientY - rect.top - 28) + "px";
+}
+
+function hideTip(event) {
+  const plot = event.currentTarget.ownerSVGElement.parentElement;
+  const tip = plot.querySelector(".tip");
+  if (tip) tip.hidden = true;
+}
+
+const palette = ["#1d4e7a", "#8a5a2b", "#2f6b52", "#6d4c6e", "#4e6070", "#7a6244"];
+
+function excessSeries() {
+  const lines = [];
+  const mean = [];
+  for (let hold = 0; hold <= xMax(); hold += 1) {
+    const stat = meanAt(hold);
+    if (!stat) continue;
+    mean.push({
+      x: hold,
+      y: stat.mean,
+      label: "持有 " + hold + " 日平均超额 " + pct(stat.mean) + "（" + stat.n + " 笔）",
+    });
+  }
+  lines.push({ name: "平均超额", color: "#1c1915", width: 2.6, mean: true, data: mean });
+  books.forEach((book, index) => {
+    if (book.flat || !book.path.length) return;
+    const on = book.date === selected;
+    lines.push({
+      name: book.date,
+      date: book.date,
+      color: palette[index % palette.length],
+      width: on ? 2.4 : 1.25,
+      data: book.path.map((row) => ({
+        x: row.hold,
+        y: row.excess,
+        label: book.date + " 持有 " + row.hold + " 日 超额 " + pct(row.excess) + "，组合 " + pct(row.port) + "，" + benchName() + " " + pct(row.bench),
+      })),
+    });
+  });
+  return lines;
+}
+
+function renderExcess() {
+  const xmax = xMax();
+  const lines = excessSeries();
+  draw(document.getElementById("excess"), lines, xmax, true);
+  animated = true;
+  document.getElementById("excess-cap").textContent =
+    "纵轴是累计超额（%），横轴是持有天数，目前画到 " + xmax + "。粗线是走到同一天的推荐等权平均。细线是每一笔。5、10、20 日还没走到的部分留白。";
+  const legend = document.getElementById("legend");
+  legend.replaceChildren();
+  lines.forEach((line) => {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    if (line.date) {
+      button.setAttribute("aria-pressed", line.date === selected ? "true" : "false");
+      button.addEventListener("click", () => { selected = line.date; render(); });
+    } else {
+      button.disabled = true;
+    }
+    const swatch = document.createElement("i");
+    swatch.className = "swatch";
+    swatch.style.background = line.color;
+    const label = document.createElement("span");
+    label.textContent = line.date ? line.name + " " + bookLabel(books.find((book) => book.date === line.date)) : line.name;
+    button.append(swatch, label);
+    item.append(button);
+    legend.append(item);
+  });
+}
+
+function bookLabel(book) {
+  if (!book || book.flat) return "空仓";
+  return book.picks.map((pick) => pick.symbol).join("、");
+}
+
+function renderBooks() {
+  const body = document.querySelector("#books tbody");
+  body.replaceChildren();
+  books.forEach((book) => {
+    const tr = document.createElement("tr");
+    tr.setAttribute("aria-selected", book.date === selected ? "true" : "false");
+    tr.addEventListener("click", () => { selected = book.date; render(); });
+    const cells = [
+      book.date,
+      bookLabel(book),
+      book.flat ? "—" : String(book.held),
+      pct(lastExcess(book)),
+      pct(horizonExcess(book, 5)),
+      pct(horizonExcess(book, 10)),
+      pct(horizonExcess(book, 20)),
+    ];
+    cells.forEach((text, index) => {
+      const td = document.createElement("td");
+      if (index < 2) td.className = "left";
+      let shown = text;
+      if (index >= 4) {
+        const value = horizonExcess(book, [5, 10, 20][index - 4]);
+        shown = book.flat ? "—" : (value === null ? "未到期" : pct(value));
+        if (value !== null) td.className = tone(value);
+      } else if (index === 3 && !book.flat && lastExcess(book) !== null) {
+        td.className = tone(lastExcess(book));
+      }
+      td.textContent = shown;
+      tr.append(td);
+    });
+    body.append(tr);
+  });
+}
+
+function renderDetail() {
+  const book = books.find((item) => item.date === selected) || books[0];
+  const title = document.getElementById("detail-title");
+  const meta = document.getElementById("detail-meta");
+  const table = document.getElementById("path");
+  const svg = document.getElementById("pair");
+  if (!book) {
+    title.textContent = "";
+    meta.textContent = "";
+    svg.replaceChildren();
+    table.replaceChildren();
+    return;
+  }
+  title.textContent = book.date + " " + bookLabel(book);
+  if (book.flat) {
+    meta.textContent = "这一天三个模型的前 5 没有交集，不建仓。";
+    svg.replaceChildren();
+    table.replaceChildren();
+    return;
+  }
+  const bits = book.picks.map((pick) => {
+    const entry = pick.entry === null ? "—" : pick.entry.toFixed(2);
+    return pick.symbol + " " + (pick.name || "") + " 入场 " + entry;
+  });
+  meta.textContent = bits.join(" · ") + (book.note ? " · " + book.note : "");
+  const xmax = Math.max(xMax(), book.held || 0);
+  draw(svg, [
+    { name: "组合", color: "#1d4e7a", width: 2.4, data: book.path.map((row) => ({ x: row.hold, y: row.port, label: "持有 " + row.hold + " 日 组合 " + pct(row.port) })) },
+    { name: benchName(), color: "#8a8176", width: 2, data: book.path.map((row) => ({ x: row.hold, y: row.bench, label: "持有 " + row.hold + " 日 " + benchName() + " " + pct(row.bench) })) },
+    { name: "超额", color: "#9c2f2a", width: 1.6, data: book.path.map((row) => ({ x: row.hold, y: row.excess, label: "持有 " + row.hold + " 日 超额 " + pct(row.excess) })) },
+  ], xmax, false);
+  const symbols = book.picks.map((pick) => pick.symbol);
+  const head = ["日期", "持有"].concat(symbols, ["组合", benchName(), "超额"]);
+  table.replaceChildren();
+  const thead = document.createElement("thead");
+  const hr = document.createElement("tr");
+  head.forEach((label, index) => {
+    const th = document.createElement("th");
+    if (index === 0) th.className = "left";
+    th.textContent = label;
+    hr.append(th);
+  });
+  thead.append(hr);
+  const tbody = document.createElement("tbody");
+  book.path.forEach((row) => {
+    const tr = document.createElement("tr");
+    const values = [row.date, String(row.hold)].concat(
+      symbols.map((symbol) => pct(row.names[symbol])),
+      [pct(row.port), pct(row.bench), pct(row.excess)]
+    );
+    values.forEach((text, index) => {
+      const td = document.createElement("td");
+      if (index === 0) td.className = "left";
+      td.textContent = text;
+      tr.append(td);
+    });
+    tbody.append(tr);
+  });
+  table.append(thead, tbody);
+}
+
+function render() {
+  syncBooks();
+  const current = currentMarket();
+  document.getElementById("kicker").textContent = current.kicker || "";
+  document.getElementById("bench-title").textContent = current.bench;
+  document.getElementById("pair-cap").textContent =
+    "纵轴是从信号日收盘起的累计涨跌幅（%）。横轴是 " + current.bench +
+    " 交易日。组合是名单等权。超额 = 组合 − 同期 " + current.bench + "。";
+  renderMarkets();
+  renderSwitch();
+  renderLede();
+  renderMeans();
+  renderExcess();
+  renderBooks();
+  renderDetail();
+}
+
+render();
+window.addEventListener("resize", () => {
+  draw(document.getElementById("excess"), excessSeries(), xMax(), false);
+  const book = books.find((item) => item.date === selected);
+  if (book && !book.flat) renderDetail();
+});
+</script>
+</body>
+</html>
+"""
+
+
+def render_page(markets: list[dict], *, page_title: str) -> str:
+    """One page with a market switch. Each market carries ``page_data`` plus label fields."""
+    blob = json.dumps({"markets": markets}, ensure_ascii=False, separators=(",", ":"))
+    blob = blob.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    return _TEMPLATE.replace("__PAGE_TITLE__", page_title).replace("__DATA__", blob)
+
+
+def render_html(
+    signals: list[dict],
+    paths: dict,
+    names: dict[str, str],
+    entries: dict[str, dict[str, float]],
+    *,
+    page_title: str = "美股交集推荐",
+    kicker: str = "标普 500 · 前 5 / 第 6–15 / 其余 · 三个模型前 5 交集",
+    bench: str = "标普 500",
+) -> str:
+    payload = page_data(signals, paths, names, entries)
+    return render_page(
+        [
+            {
+                "key": "book",
+                "label": bench,
+                "bench": bench,
+                "kicker": kicker,
+                "as_of": payload["as_of"],
+                "horizons": payload["horizons"],
+                "groups": payload["groups"],
+            }
+        ],
+        page_title=page_title,
+    )
