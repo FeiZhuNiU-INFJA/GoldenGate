@@ -42,3 +42,4 @@ def test_old_three_market_checkpoint_loads():
     x = torch.randn(1, 128, 6)
     out = fresh(x, torch.tensor([3]))
     assert out["5d"].shape == (1, 3)
+
